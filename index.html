@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KuroGram</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-paper">
+    <div id="app">
+        <!-- EN-TÊTE UNIFIÉ COMPACT -->
+        <header class="top-bar">
+            <div class="brand-col">
+                <div class="brand-line">
+                    <h1>KuroGram</h1>
+                    <span id="streak-badge" title="Jours consécutifs">🔥 1j</span>
+                    <span id="lives-container" class="hidden">❤️❤️❤️❤️</span>
+                </div>
+                <div class="sub-status">
+                    <span id="mode-label">Mode 0 : Règles</span>
+                    <select id="size-selector" class="size-selector hidden" title="Taille de la grille"></select>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div id="timer-label" class="timer-pill hidden">⏱️ 00:00</div>
+                <button id="btn-new-grid" class="icon-btn" title="Nouvelle grille (Pub)">🔄</button>
+                <button id="btn-daily" class="icon-btn" title="Défi du Jour">📅</button>
+                <button id="btn-menu" class="icon-btn menu-btn" title="Menu Principal">☰</button>
+            </div>
+        </header>
+
+        <!-- BANDEAU TUTORIEL / GUIDAGE (Modes 0 et 1 uniquement) -->
+        <div id="guide-banner" class="guide-banner hidden">
+            <span id="guide-text">Bienvenue dans le mode d'apprentissage.</span>
+        </div>
+
+        <!-- PLATEAU DE JEU 2.5D AUTO-ADAPTATIF -->
+        <main class="board-wrapper" id="board-wrapper">
+            <div id="grid-container" class="grid-container"></div>
+        </main>
+
+        <!-- ZONE DE CONTRÔLES TOUJOURS VISIBLE EN BAS -->
+        <section class="controls-area">
+            <div class="input-modes">
+                <button id="tool-num" class="tool-btn active">✍️ Chiffre</button>
+                <button id="tool-note" class="tool-btn">✏️ Notes</button>
+                <button id="action-wall" class="tool-btn wall-action-btn">⬛ Mur</button>
+                <button id="btn-verify" class="tool-btn verify-btn">✔️ Vérifier</button>
+            </div>
+
+            <!-- PAVÉ NUMÉRIQUE COMPACT -->
+            <div id="numpad" class="numpad"></div>
+
+            <!-- BARRE DES 3 BONUS + CRÉDIT INTÉGRÉ -->
+            <div id="bonus-bar" class="bonus-bar">
+                <button id="bonus-hammer" class="bonus-btn">
+                    <span class="bonus-icon" id="icon-b1">🔨</span>
+                    <span class="bonus-name" id="name-b1">Tampon</span>
+                    <span class="bonus-count" id="count-b1">3</span>
+                </button>
+                <button id="bonus-quill" class="bonus-btn">
+                    <span class="bonus-icon" id="icon-b2">🪶</span>
+                    <span class="bonus-name" id="name-b2">Plume</span>
+                    <span class="bonus-count" id="count-b2">2</span>
+                </button>
+                <button id="bonus-pencil" class="bonus-btn">
+                    <span class="bonus-icon" id="icon-b3">✏️</span>
+                    <span class="bonus-name" id="name-b3">Crayon</span>
+                    <span class="bonus-count" id="count-b3">3</span>
+                </button>
+            </div>
+            <footer class="credits">Créé par <strong>Hazraael</strong></footer>
+        </section>
+    </div>
+
+    <!-- MENU UNIQUE CENTRALISÉ (ONGLETS : MODES / STATS / THÈMES & HAUTS-FAITS) -->
+    <div id="modal-hub" class="modal hidden">
+        <div class="modal-content">
+            <div class="hub-tabs">
+                <button class="hub-tab active" data-tab="tab-modes">⚙️ Modes</button>
+                <button class="hub-tab" data-tab="tab-stats">📊 Stats</button>
+                <button class="hub-tab" data-tab="tab-themes">🏆 Thèmes</button>
+            </div>
+
+            <!-- ONGLET 1 : MODES & PARAMÈTRES -->
+            <div id="tab-modes" class="tab-pane">
+                <div class="mode-list" id="mode-list"></div>
+                <hr>
+                <label class="toggle-row">
+                    <span>Chiffres gravés dans les murs (Modes 0-3)</span>
+                    <input type="checkbox" id="toggle-engraved" checked>
+                </label>
+                <div class="dev-unlock-box">
+                    <input type="text" id="secret-code-input" placeholder="Code donateur / secret...">
+                    <button id="btn-secret-code" class="primary-btn">Valider</button>
+                </div>
+                <div class="debug-zone">
+                    <strong>🛠️ Outils de phase de test :</strong>
+                    <div class="debug-actions">
+                        <button id="btn-debug-unlock" class="secondary-btn">🔓 Tout débloquer</button>
+                        <button id="btn-debug-reset" class="danger-btn">🗑️ Réinitialiser</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ONGLET 2 : STATISTIQUES PERSONNELLES (GLOBAL + PAR TAILLE) -->
+            <div id="tab-stats" class="tab-pane hidden">
+                <div class="stats-filter-row">
+                    <label for="stats-size-filter"><strong>Afficher :</strong></label>
+                    <select id="stats-size-filter" class="size-selector">
+                        <option value="global">🌍 Global (Toutes les grilles)</option>
+                        <option value="3">Grille 3x3</option>
+                        <option value="4">Grille 4x4</option>
+                        <option value="5">Grille 5x5</option>
+                        <option value="6">Grille 6x6</option>
+                        <option value="7">Grille 7x7</option>
+                        <option value="8">Grille 8x8</option>
+                        <option value="9">Grille 9x9</option>
+                        <option value="10">Grille 10x10 (PGM)</option>
+                        <option value="11">Grille 11x11 (PGM)</option>
+                        <option value="12">Grille 12x12 (PGM)</option>
+                        <option value="13">Grille 13x13 (PGM)</option>
+                        <option value="14">Grille 14x14 (PGM)</option>
+                        <option value="15">Grille 15x15 (PGM)</option>
+                        <option value="16">Grille 16x16 (PGM)</option>
+                    </select>
+                </div>
+                <div id="stats-grid" class="stats-grid"></div>
+                <div id="stats-details" class="stats-details"></div>
+            </div>
+
+            <!-- ONGLET 3 : THÈMES & HAUTS-FAITS -->
+            <div id="tab-themes" class="tab-pane hidden">
+                <h3>Thèmes Visuels</h3>
+                <div id="theme-selector" class="theme-list"></div>
+                <h3>Hauts-Faits</h3>
+                <div id="achievements-list" class="achievements-list"></div>
+            </div>
+
+            <button class="close-modal-btn" data-close="modal-hub">Fermer</button>
+        </div>
+    </div>
+
+    <!-- MODALE : VICTOIRE / DÉFAITE -->
+    <div id="modal-end" class="modal hidden">
+        <div class="modal-content center">
+            <h2 id="end-title">Grille Résolue !</h2>
+            <p id="end-message"></p>
+            <div id="end-ad-info" class="ad-limit-box hidden"></div>
+            <div class="end-actions">
+                <button id="btn-extra-life" class="secondary-btn hidden">📺 Regarder une pub (+Vies)</button>
+                <button id="btn-next-level" class="primary-btn">Nouvelle Grille ▶</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE : PUBLICITÉ RÉCOMPENSÉE (SIMULATEUR PRÊT POUR ADMOB) -->
+    <div id="modal-ad" class="modal hidden">
+        <div class="modal-content center">
+            <h2 id="ad-modal-title">📺 Bonus Vidéo</h2>
+            <p id="ad-modal-desc"></p>
+            <div id="ad-video-box" class="ad-video-box hidden">
+                <div class="ad-spinner">⏳</div>
+                <div id="ad-countdown-text">Publicité en cours... 3s</div>
+            </div>
+            <div class="end-actions" id="ad-modal-buttons">
+                <button id="btn-watch-ad" class="secondary-btn">📺 Regarder la vidéo</button>
+                <button id="btn-cancel-ad" class="close-modal-btn">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

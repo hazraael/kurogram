@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KuroGram — Portail Officiel & Téléchargement</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <style>
+        :root {
+            --bg: #f4f1ea;
+            --card: #e9e4d8;
+            --text: #2c3539;
+            --accent: #4a6b82;
+            --gold: #c08552;
+            --dark: #2b2b2b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg); color: var(--text); line-height: 1.5; padding: 20px 14px 40px; }
+        .container { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+        
+        /* HERO */
+        .hero {
+            background: var(--dark); color: #f4f1ea; padding: 28px 22px; border-radius: 18px;
+            display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .hero img { width: 88px; height: 88px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .hero-text { flex: 1; min-width: 240px; }
+        .hero-text h1 { font-size: 2rem; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .badge { display: inline-block; background: var(--accent); color: #fff; font-size: 0.78rem; padding: 3px 9px; border-radius: 12px; font-weight: 700; margin-bottom: 8px; }
+        
+        /* CARTES D'ACTIONS */
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+        .card {
+            background: var(--card); padding: 20px; border-radius: 14px;
+            display: flex; flex-direction: column; justify-content: space-between; gap: 14px;
+            box-shadow: 0 4px 0 #c7c0b0;
+        }
+        .card h2 { font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+        .card p { font-size: 0.88rem; opacity: 0.9; }
+        .btn {
+            display: inline-block; text-align: center; text-decoration: none;
+            padding: 12px 16px; border-radius: 10px; font-weight: 800; font-size: 0.92rem;
+            background: var(--accent); color: #fff; box-shadow: 0 4px 0 #2d4352;
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #2d4352; }
+        .btn-apk { background: #2e7d32; box-shadow: 0 4px 0 #1b4d1e; }
+        .btn-daily { background: #d35400; box-shadow: 0 4px 0 #873600; }
+
+        /* SECTIONS INFOS & CHANGELOG */
+        .section-box { background: #fff; padding: 22px; border-radius: 14px; box-shadow: 0 3px 0 #d5cfc0; }
+        .section-box h2 { font-size: 1.25rem; margin-bottom: 12px; color: var(--accent); border-bottom: 2px solid var(--card); padding-bottom: 6px; }
+        .steps-list { padding-left: 20px; font-size: 0.9rem; display: flex; flex-direction: column; gap: 6px; }
+        
+        .version-item { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px dashed #ddd; }
+        .version-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .version-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .version-tag { font-weight: 800; color: var(--dark); font-size: 1rem; }
+        .version-date { font-size: 0.8rem; background: var(--card); padding: 2px 8px; border-radius: 8px; font-weight: 600; }
+        .version-notes { padding-left: 18px; font-size: 0.88rem; display: flex; flex-direction: column; gap: 4px; }
+
+        footer { text-align: center; font-size: 0.82rem; opacity: 0.75; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- EN-TÊTE -->
+        <header class="hero">
+            <img src="icon.svg" alt="Icône KuroGram">
+            <div class="hero-text">
+                <span class="badge">Version 1.0.0 Disponible</span>
+                <h1>KuroGram</h1>
+                <p>Le casse-tête logique qui fusionne l'unicité du <strong>Sudoku</strong>, les sommes du <strong>Kakuro</strong> et les murs cachés du <strong>Nonogram</strong>.</p>
+            </div>
+        </header>
+
+        <!-- 3 ACTIONS PRINCIPALES -->
+        <section class="grid-cards">
+            <!-- CARTE 1 : ANDROID APK -->
+            <div class="card">
+                <div>
+                    <h2>🤖 Android (APK)</h2>
+                    <p>Téléchargez et installez directement le fichier APK officiel sur votre smartphone ou tablette Android, sans passer par le store.</p>
+                </div>
+                <!-- Place ton fichier KuroGram.apk dans le dossier ou mets le lien GitHub Releases ici -->
+                <a href="KuroGram.apk" download class="btn btn-apk">📥 Télécharger l'APK (v1.0)</a>
+            </div>
+
+            <!-- CARTE 2 : DÉFI DU JOUR & JEU WEB -->
+            <div class="card">
+                <div>
+                    <h2>📅 Exercice du Jour</h2>
+                    <p>Chaque jour, une nouvelle grille 5x5 identique pour tous les joueurs. Testez votre logique directement dans votre navigateur !</p>
+                </div>
+                <a href="index.html?daily=1" class="btn btn-daily">🔥 Jouer au Défi du Jour</a>
+            </div>
+
+            <!-- CARTE 3 : JOUER / INSTALLER SUR IPHONE -->
+            <div class="card">
+                <div>
+                    <h2>🍏 iPhone / Navigateur</h2>
+                    <p>Lancez le jeu complet et installez-le sur l'écran d'accueil de votre iPhone pour y jouer plein écran et 100 % hors-ligne.</p>
+                </div>
+                <a href="index.html" class="btn">▶️ Ouvrir KuroGram</a>
+            </div>
+        </section>
+
+        <!-- GUIDE D'INSTALLATION RAPIDE (ANDROID & IPHONE) -->
+        <section class="section-box">
+            <h2>📲 Comment installer KuroGram sur votre téléphone ?</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-top: 10px;">
+                <div>
+                    <strong>🤖 Sur Android (via le fichier APK) :</strong>
+                    <ol class="steps-list" style="margin-top: 6px;">
+                        <li>Cliquez sur <b>« Télécharger l'APK »</b> ci-dessus.</li>
+                        <li>Ouvrez le fichier téléchargé <code>KuroGram.apk</code>.</li>
+                        <li>Si Android affiche un message de sécurité, autorisez <i>« l'installation depuis cette source »</i> puis validez.</li>
+                    </ol>
+                </div>
+                <div>
+                    <strong>🍏 Sur iPhone & iPad (Sans App Store) :</strong>
+                    <ol class="steps-list" style="margin-top: 6px;">
+                        <li>Ouvrez le jeu dans <b>Safari</b> en cliquant sur <b>« Ouvrir KuroGram »</b>.</li>
+                        <li>Appuyez sur le bouton <b>Partager</b> (le carré avec une flèche vers le haut en bas de l'écran).</li>
+                        <li>Choisissez <b>« Sur l'écran d'accueil »</b> : KuroGram s'installe comme une vraie application hors-ligne !</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODE PGM & SOUTIEN -->
+        <section class="section-box">
+            <h2>🤩 Débloquer le Mode PGM (Grilles 10x10 à 16x16 Hexadécimal)</h2>
+            <p style="font-size: 0.9rem;">
+                Le <strong>Mode 6 : 🤩 PGM</strong> ouvre l'accès aux grilles géantes de <strong>10x10 jusqu'à 16x16</strong> utilisant la notation hexadécimale (chiffres <code>1</code> à <code>9</code> et lettres <code>A</code> à <code>G</code>).<br><br>
+                Vous pouvez le débloquer gratuitement en relevant le défi ultime en jeu (<strong>terminer 5 grilles 9x9 sans erreur et sans bonus</strong>), ou obtenir immédiatement votre <strong>code secret donateur</strong> en soutenant le projet !
+            </p>
+        </section>
+
+        <!-- NOTES DE VERSION (CHANGELOG) -->
+        <section class="section-box">
+            <h2>📜 Notes de version (Mises à jour)</h2>
+
+            <div class="version-item">
+                <div class="version-header">
+                    <span class="version-tag">Version 1.0.0 — Lancement initial</span>
+                    <span class="version-date">Octobre 2026</span>
+                </div>
+                <ul class="version-notes">
+                    <li><strong>7 Modes de jeu :</strong> Du Mode 0 (Tutoriel interactif pas-à-pas) jusqu'au Mode 6 (🤩 PGM Hexadécimal de 10x10 à 16x16).</li>
+                    <li><strong>Plateau 2.5D :</strong> Tuiles en relief, murs enfoncés avec gravure optionnelle et animations de résolution par ligne/colonne.</li>
+                    <li><strong>3 Bonus tactiques :</strong> Tampon/Marteau (révèle un mur), Plume/Burin (révèle une case clé) et Crayon/Craie (ajoute les candidats sur 3 cases).</li>
+                    <li><strong>Statistiques complètes :</strong> Suivi global et détaillé par taille de grille (3x3 à 16x16), temps record, moyen et taux de sans-faute.</li>
+                    <li><strong>3 Thèmes déblocables :</strong> Carnet & Crayon, Plateau & Pierre, et Nuit d'Ardoise & Or.</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer>
+            KuroGram — Créé par <strong>Hazraael</strong>
+        </footer>
+    </div>
+</body>
+</html>

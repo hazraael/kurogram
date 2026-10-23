@@ -1,0 +1,18 @@
+{
+  "name": "KuroGram",
+  "short_name": "KuroGram",
+  "description": "Jeu de réflexion hybride mêlant Sudoku, Kakuro et Nonogram. Créé par Hazraael.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f1ea",
+  "theme_color": "#4a6b82",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
