@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="game-screen theme-paper">
-    <!-- CONTENEUR DE NOTIFICATIONS INTÉGRÉES (REMPLACE LES ALERTES NATIVES) -->
+    <!-- CONTENEUR DE NOTIFICATIONS INTÉGRÉES -->
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
     <div id="app">
@@ -33,6 +33,7 @@
 
             <div class="header-actions">
                 <div id="timer-label" class="timer-pill hidden">⏱️ 00:00</div>
+                <button id="btn-help" class="icon-btn help-btn" title="Rappel des 3 Règles (?)">?</button>
                 <button id="btn-new-grid" class="icon-btn" title="Nouvelle grille">🔄</button>
                 <button id="btn-daily" class="icon-btn" title="Défi du Jour">📅</button>
                 <button id="btn-menu" class="icon-btn menu-btn" title="Menu Principal">☰</button>
@@ -85,6 +86,148 @@
         </section>
     </div>
 
+    <!-- MODALE : CARROUSEL VISUEL DES 3 RÈGLES (BOUTON ? & DÉMARRAGE TUTO) -->
+    <div id="modal-rules" class="modal hidden">
+        <div class="modal-content rules-modal-content">
+            <div class="rules-header">
+                <h2>📖 Les 3 Règles d'Or</h2>
+                <span class="swipe-hint">Glissez ou utilisez ◀ ▶</span>
+            </div>
+
+            <!-- ZONE CARROUSEL SWIPABLE -->
+            <div id="rules-carousel" class="rules-carousel">
+                <!-- SLIDE 1 : SUDOKU + SECRET DU MUR -->
+                <div class="rule-slide active" data-slide="0">
+                    <div class="rule-badge">Règle 1 / 3 — L'ADN du Sudoku</div>
+                    <h3>Unicité des chiffres (même sous un Mur !)</h3>
+                    <p class="rule-desc">
+                        Sur une grille de 4 cases, chaque ligne et chaque colonne contient les chiffres <strong>1, 2, 3 et 4 une seule fois</strong>.<br>
+                        ⚠️ <strong>Important :</strong> Un <strong>Mur noir ⬛ cache toujours un chiffre</strong> ! Ce chiffre masqué compte pour la règle du Sudoku et ne peut plus être utilisé ailleurs sur la même ligne ou colonne.
+                    </p>
+
+                    <div class="example-box ex-good">
+                        <div class="ex-title">✅ CORRECT : Les chiffres 1, 2, 3 et 4 sont tous présents une seule fois</div>
+                        <div class="mini-row">
+                            <div class="mini-tile">1</div>
+                            <div class="mini-tile mini-wall"><span>2</span><small>🔒</small></div>
+                            <div class="mini-tile">3</div>
+                            <div class="mini-tile">4</div>
+                        </div>
+                        <div class="ex-caption">Le <b>2 🔒</b> est caché sous le mur : les cases blanches utilisent donc <b>1, 3 et 4</b>.</div>
+                    </div>
+
+                    <div class="example-box ex-bad">
+                        <div class="ex-title">❌ INCORRECT : Le chiffre 2 est utilisé deux fois !</div>
+                        <div class="mini-row">
+                            <div class="mini-tile">1</div>
+                            <div class="mini-tile mini-wall"><span>2</span><small>🔒</small></div>
+                            <div class="mini-tile mini-err">2</div>
+                            <div class="mini-tile">4</div>
+                        </div>
+                        <div class="ex-caption">Interdit : le <b>2</b> est déjà caché sous le mur de cette ligne, on ne peut pas le remettre dans une case blanche (et il manque le 3).</div>
+                    </div>
+                </div>
+
+                <!-- SLIDE 2 : NONOGRAM -->
+                <div class="rule-slide hidden" data-slide="1">
+                    <div class="rule-badge">Règle 2 / 3 — L'ADN du Nonogram</div>
+                    <h3>Les Murs noirs découpent la grille</h3>
+                    <p class="rule-desc">
+                        Certaines cases sont des <strong>Murs noirs ⬛</strong> qui séparent les cases blanches en plusieurs blocs.<br>
+                        Si l'indice au bord affiche <strong>deux nombres</strong> (ex : <b>1 - 7</b>), il y a <strong>obligatoirement au moins un Mur ⬛</strong> entre le premier bloc blanc et le second bloc blanc.
+                    </p>
+
+                    <div class="example-box ex-good">
+                        <div class="ex-title">✅ CORRECT : Le mur sépare bien les deux blocs de l'indice « 1 - 7 »</div>
+                        <div class="mini-row">
+                            <div class="mini-clue">1 - 7</div>
+                            <div class="mini-tile">1</div>
+                            <div class="mini-tile mini-wall"><span>2</span><small>🔒</small></div>
+                            <div class="mini-tile">3</div>
+                            <div class="mini-tile">4</div>
+                        </div>
+                        <div class="ex-caption">1er bloc blanc à gauche (<b>1</b>), puis un <b>Mur ⬛</b>, puis le 2e bloc blanc à droite (<b>3 et 4</b>).</div>
+                    </div>
+
+                    <div class="example-box ex-bad">
+                        <div class="ex-title">❌ INCORRECT : Aucun mur ne sépare les deux blocs !</div>
+                        <div class="mini-row">
+                            <div class="mini-clue">1 - 7</div>
+                            <div class="mini-tile mini-err">1</div>
+                            <div class="mini-tile mini-err">3</div>
+                            <div class="mini-tile mini-err">4</div>
+                            <div class="mini-tile mini-wall"><span>2</span><small>🔒</small></div>
+                        </div>
+                        <div class="ex-caption">Interdit : ici toutes les cases blanches se touchent (cela ferait un seul bloc de somme 1+3+4 = <b>8</b> au lieu de <b>1 - 7</b>).</div>
+                    </div>
+                </div>
+
+                <!-- SLIDE 3 : KAKURO -->
+                <div class="rule-slide hidden" data-slide="2">
+                    <div class="rule-badge">Règle 3 / 3 — L'ADN du Kakuro</div>
+                    <h3>Les Sommes (Le Mur ne s'additionne jamais !)</h3>
+                    <p class="rule-desc">
+                        Les indices sur les bords indiquent <strong>la somme des cases blanches</strong> de chaque bloc.<br>
+                        ⚠️ <strong>Règle clé :</strong> Le chiffre caché sous un <strong>Mur ⬛ ne compte JAMAIS dans la somme</strong> (il vaut 0 pour l'addition, même s'il compte pour le Sudoku !).
+                    </p>
+
+                    <div class="example-box ex-good">
+                        <div class="ex-title">✅ CORRECT : Seules les cases blanches sont additionnées</div>
+                        <div class="mini-row">
+                            <div class="mini-clue">1 - 7</div>
+                            <div class="mini-tile">1</div>
+                            <div class="mini-tile mini-wall"><span>2</span><small>🔒</small></div>
+                            <div class="mini-tile">3</div>
+                            <div class="mini-tile">4</div>
+                        </div>
+                        <div class="ex-caption">Bloc gauche = <b>1</b>. Le mur (<b>2🔒</b>) est ignoré dans la somme. Bloc droit = <b>3 + 4 = 7</b> !</div>
+                    </div>
+
+                    <div class="example-box ex-bad">
+                        <div class="ex-title">❌ INCORRECT : Le chiffre du mur a été compté dans la somme</div>
+                        <div class="mini-row">
+                            <div class="mini-clue">1 - 7</div>
+                            <div class="mini-tile">1</div>
+                            <div class="mini-tile mini-wall"><span>4</span><small>🔒</small></div>
+                            <div class="mini-tile mini-err">3</div>
+                            <div class="mini-tile mini-err">2</div>
+                        </div>
+                        <div class="ex-caption">Erreur : les cases blanches de droite font <b>3 + 2 = 5</b> (et non 7). Le <b>4🔒</b> sous le mur ne s'additionne jamais !</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NAVIGATION DU CARROUSEL (FLÈCHES + POINTS) -->
+            <div class="carousel-nav">
+                <button id="rule-prev" class="carousel-arrow" title="Règle précédente">◀</button>
+                <div class="carousel-dots">
+                    <button class="carousel-dot active" data-dot="0" aria-label="Règle 1"></button>
+                    <button class="carousel-dot" data-dot="1" aria-label="Règle 2"></button>
+                    <button class="carousel-dot" data-dot="2" aria-label="Règle 3"></button>
+                </div>
+                <button id="rule-next" class="carousel-arrow" title="Règle suivante">▶</button>
+            </div>
+
+            <div class="rules-footer-actions">
+                <button id="btn-close-rules" class="primary-btn">J'ai compris ! Fermer ✕</button>
+                <button id="btn-rules-start-tuto" class="secondary-btn hidden">🎓 Faire le tutoriel guidé (Mode 0)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE : QUESTION AVANT LE PUZZLE DU JOUR -->
+    <div id="modal-daily-check" class="modal hidden">
+        <div class="modal-content center">
+            <h2>📅 Défi du Jour (5x5)</h2>
+            <p>Avant de lancer la grille quotidienne, <strong>connaissez-vous déjà les 3 règles de KuroGram</strong> (Sudoku, Murs Nonogram et Sommes Kakuro) ?</p>
+            <div class="end-actions">
+                <button id="btn-daily-know-yes" class="primary-btn">✅ Oui, lancer le Défi du Jour ▶</button>
+                <button id="btn-daily-know-no" class="secondary-btn">📖 Non, voir les règles illustrées</button>
+                <button id="btn-daily-cancel" class="close-modal-btn">Annuler</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MENU UNIQUE CENTRALISÉ (ONGLETS : MODES / STATS / THÈMES & HAUTS-FAITS) -->
     <div id="modal-hub" class="modal hidden">
         <div class="modal-content">
@@ -108,7 +251,7 @@
                 </div>
                 <button id="btn-player-reset" class="danger-btn" style="margin-top:4px;">🗑️ Réinitialiser ma progression</button>
 
-                <!-- ZONE DE TEST MASQUÉE PAR DÉFAUT (S'active en tapant TEST ou 5 clics sur Hazraael) -->
+                <!-- ZONE DE TEST MASQUÉE PAR DÉFAUT -->
                 <div id="debug-zone" class="debug-zone hidden">
                     <strong>🛠️ Outils Développeur (Test) :</strong>
                     <div class="debug-actions">
@@ -118,7 +261,7 @@
                 </div>
             </div>
 
-            <!-- ONGLET 2 : STATISTIQUES PERSONNELLES (GLOBAL + PAR TAILLE) -->
+            <!-- ONGLET 2 : STATISTIQUES PERSONNELLES -->
             <div id="tab-stats" class="tab-pane hidden">
                 <div class="stats-filter-row">
                     <label for="stats-size-filter"><strong>Afficher :</strong></label>
@@ -169,7 +312,7 @@
         </div>
     </div>
 
-    <!-- MODALE : CONFIRMATION INTÉGRÉE (REMPLACE WINDOW.CONFIRM) -->
+    <!-- MODALE : CONFIRMATION INTÉGRÉE -->
     <div id="modal-confirm" class="modal hidden">
         <div class="modal-content center">
             <h2 id="confirm-title">Confirmation</h2>

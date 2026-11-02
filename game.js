@@ -1,6 +1,6 @@
 // KUROGRAM - Créé par Hazraael
 const SYMBOLS = ['1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G'];
-const SAVE_KEY = 'kurogram_hazraael_v6';
+const SAVE_KEY = 'kurogram_hazraael_v7';
 const MAX_LIVES = 4;
 
 const PGM_BONUS_REWARDS = {
@@ -23,7 +23,7 @@ const THEMES = [
     { id: 'theme-slate', name: "Nuit d'Ardoise & Or", cond: "10 victoires sans erreur ou 7 jours consécutifs", icons: ['⚡','⚜️','🔭'], names: ['Sceau','Plume d\'Or','Astrolabe'] }
 ];
 
-// --- NOTIFICATIONS IN-PAGE (REMPLACE WINDOW.ALERT) ---
+// --- NOTIFICATIONS IN-PAGE ---
 function showToast(htmlMsg, type = 'info', duration = 4200) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -41,7 +41,7 @@ function showToast(htmlMsg, type = 'info', duration = 4200) {
     }
 }
 
-// --- CONFIRMATION IN-PAGE (REMPLACE WINDOW.CONFIRM) ---
+// --- CONFIRMATION IN-PAGE ---
 function showConfirmModal(title, message, onConfirm) {
     const modal = document.getElementById('modal-confirm');
     document.getElementById('confirm-title').textContent = title;
@@ -90,6 +90,7 @@ function getDefaultState() {
     return {
         mode: 0,
         tutorialStep: 0,
+        hasSeenIntroRules: false,
         size: 3,
         customSizes: { 4: 6, 5: 6, 6: 10 },
         solutionNumbers: [],
@@ -128,6 +129,7 @@ function getDefaultState() {
 let state = getDefaultState();
 let timerInterval = null;
 let adCountdownInterval = null;
+let currentRuleSlide = 0;
 
 function hashSecret(str) {
     let h = 2166136261;
@@ -137,6 +139,82 @@ function hashSecret(str) {
     }
     return '0x' + h.toString(16);
 }
+
+// --- CARROUSEL VISUEL DES 3 RÈGLES (SWIPE + FLÈCHES + POINTS + SOURIS) ---
+function openRulesModal(slideIndex = 0, showStartTutoBtn = false) {
+    setRuleSlide(slideIndex);
+    document.getElementById('btn-rules-start-tuto').classList.toggle('hidden', !showStartTutoBtn);
+    document.getElementById('modal-rules').classList.remove('hidden');
+}
+
+function setRuleSlide(idx) {
+    const slides = document.querySelectorAll('.rule-slide');
+    const dots = document.querySelectorAll('.carousel-dot');
+    currentRuleSlide = (idx + slides.length) % slides.length;
+
+    slides.forEach((s, i) => s.classList.toggle('hidden', i !== currentRuleSlide));
+    dots.forEach((d, i) => d.classList.toggle('active', i === currentRuleSlide));
+}
+
+document.getElementById('btn-help').addEventListener('click', () => {
+    openRulesModal(0, state.mode !== 0 || state.isDaily);
+});
+
+document.getElementById('rule-prev').addEventListener('click', () => setRuleSlide(currentRuleSlide - 1));
+document.getElementById('rule-next').addEventListener('click', () => setRuleSlide(currentRuleSlide + 1));
+
+document.querySelectorAll('.carousel-dot').forEach(dot => {
+    dot.addEventListener('click', () => setRuleSlide(parseInt(dot.dataset.dot, 10)));
+});
+
+document.getElementById('btn-close-rules').addEventListener('click', () => {
+    state.hasSeenIntroRules = true;
+    saveProgress();
+    document.getElementById('modal-rules').classList.add('hidden');
+});
+
+document.getElementById('btn-rules-start-tuto').addEventListener('click', () => {
+    state.hasSeenIntroRules = true;
+    saveCurrentGridSnapshot();
+    state.isDaily = false;
+    state.mode = 0;
+    state.tutorialStep = 0;
+    saveProgress();
+    document.getElementById('modal-rules').classList.add('hidden');
+    generatePuzzle(true);
+});
+
+// Support du glissement au doigt (Touch Swipe) et à la souris (Mouse Drag) sur le carrousel
+(function initCarouselSwipe() {
+    const carousel = document.getElementById('rules-carousel');
+    let startX = null;
+
+    carousel.addEventListener('touchstart', (e) => {
+        startX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    carousel.addEventListener('touchend', (e) => {
+        if (startX === null) return;
+        const diff = e.changedTouches[0].screenX - startX;
+        if (Math.abs(diff) > 40) {
+            setRuleSlide(diff < 0 ? currentRuleSlide + 1 : currentRuleSlide - 1);
+        }
+        startX = null;
+    }, { passive: true });
+
+    carousel.addEventListener('mousedown', (e) => {
+        startX = e.clientX;
+    });
+
+    carousel.addEventListener('mouseup', (e) => {
+        if (startX === null) return;
+        const diff = e.clientX - startX;
+        if (Math.abs(diff) > 40) {
+            setRuleSlide(diff < 0 ? currentRuleSlide + 1 : currentRuleSlide - 1);
+        }
+        startX = null;
+    });
+})();
 
 // --- SYSTÈME DE PUBLICITÉ RÉCOMPENSÉE ---
 function requestRewardedAd({ title, description, onReward }) {
@@ -217,7 +295,7 @@ function updateTimerDisplay() {
     document.getElementById('timer-label').textContent = `⏱️ ${formatTime(state.elapsedSeconds)}`;
 }
 
-// --- SAUVEGARDE & SYNCHRONISATION MULTI-ONGLETS ---
+// --- SAUVEGARDE & SYNCHRONISATION ---
 function getTargetSizeForCurrentMode() {
     if (state.isDaily) return 5;
     if (state.mode === 0) return 3;
@@ -317,6 +395,7 @@ function saveProgress() {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
         mode: state.mode,
         tutorialStep: state.tutorialStep,
+        hasSeenIntroRules: state.hasSeenIntroRules,
         customSizes: state.customSizes,
         bonuses: state.bonuses,
         noBonusWins: state.noBonusWins,
@@ -335,7 +414,6 @@ function saveProgress() {
     }));
 }
 
-// Synchronisation automatique entre onglets si un second onglet est ouvert
 window.addEventListener('storage', (e) => {
     if (e.key === SAVE_KEY && e.newValue) {
         loadProgress();
@@ -366,6 +444,10 @@ function seededRandom() {
 function generatePuzzle(forceNew = false) {
     const key = getGridKey();
     if (!forceNew && restoreGridSnapshotIfAvailable(key)) {
+        // Si c'est le tout premier démarrage en Mode 0, afficher automatiquement les 3 règles visuelles
+        if (!state.isDaily && state.mode === 0 && !state.hasSeenIntroRules) {
+            openRulesModal(0, false);
+        }
         return;
     }
 
@@ -382,6 +464,9 @@ function generatePuzzle(forceNew = false) {
         recordGameStarted(3);
         saveCurrentGridSnapshot();
         startTimer();
+        if (!state.hasSeenIntroRules) {
+            openRulesModal(0, false);
+        }
         return;
     }
 
@@ -593,12 +678,11 @@ function renderAll() {
                 span.textContent = SYMBOLS[val - 1];
                 tile.appendChild(span);
 
-                // Petit badge cadenas sur les murs gravés pour bien les distinguer d'une saisie normale
                 if (isWall) {
                     const lockBadge = document.createElement('span');
                     lockBadge.className = 'wall-lock-badge';
                     lockBadge.textContent = '🔒';
-                    lockBadge.title = "Chiffre gravé sous le mur (compte pour l'unicité Sudoku, mais pas dans la somme)";
+                    lockBadge.title = "Chiffre masqué sous le mur : compte pour le Sudoku (unicité), mais vaut 0 dans la somme !";
                     tile.appendChild(lockBadge);
                 }
             } else if (!isWall && state.playerNotes[r][c].size > 0) {
@@ -698,7 +782,7 @@ document.getElementById('size-selector').addEventListener('change', (e) => {
     generatePuzzle(false);
 });
 
-// Explication enrichie incluant la distinction des chiffres gravés sous les murs
+// Guide pas-à-pas clarifié sur le double rôle du Mur (0 dans la somme, mais compte pour le Sudoku)
 function updateGuideBanner() {
     const banner = document.getElementById('guide-banner');
     const text = document.getElementById('guide-text');
@@ -710,15 +794,15 @@ function updateGuideBanner() {
 
     if (state.mode === 0 && state.tutorialStep === 0) {
         if (state.playerWalls[0][1]) {
-            text.innerHTML = "<strong>Étape 1/2 :</strong> Tu as posé le <b>Mur ⬛</b> ! Remarque le <b><i>2</i> 🔒 gravé</b> dedans : le mur cache le chiffre 2 (qui ne peut plus être mis ailleurs sur la ligne/colonne), mais ne compte pas dans la somme. Pose <b>1</b> à gauche et <b>3</b> à droite !";
+            text.innerHTML = "<strong>Étape 1/2 :</strong> Super ! Le <b>Mur ⬛</b> au milieu cache le chiffre <b><i>2</i> 🔒</b> : ce <b>2</b> ne compte <u>pas</u> dans la somme <b>1 - 3</b>, mais il est déjà pris pour le Sudoku ! Il ne te reste plus qu'à poser <b>1</b> à gauche et <b>3</b> à droite.";
         } else {
-            text.innerHTML = "<strong>Étape 1/2 (Sommes & Murs) :</strong> Ligne 1 (indice <b>1 - 3</b>) : touche la 1re case puis <b>1</b>. Touche la case du milieu puis <b>⬛ Mur</b> (elle cachera le chiffre 2 🔒). Touche la 3e case et pose <b>3</b> !";
+            text.innerHTML = "<strong>Étape 1/2 :</strong> Regarde la 1re ligne : l'indice est <b>1 - 3</b> (deux blocs séparés par un Mur). Touche la 1re case et pose <b>1</b>. Touche la case du milieu et clique sur <b>⬛ Mur</b>. Touche la 3e case et pose <b>3</b> ! <i>(Besoin d'exemples ? Clique sur <b>?</b> en haut)</i>.";
         }
         return;
     }
 
     if (state.mode === 0 && state.tutorialStep === 1) {
-        text.innerHTML = "<strong>Étape 2/2 (Grille 3x3 complète) :</strong> Chaque ligne et colonne contient <b>1, 2 et 3</b>. Un <b>Mur ⬛</b> sépare les sommes et affiche en gris <b>🔒</b> le chiffre qu'il cache. Complète la grille !";
+        text.innerHTML = "<strong>Étape 2/2 (Grille 3x3) :</strong> Chaque ligne/colonne doit contenir <b>1, 2 et 3</b>. Rappel : le chiffre <b>🔒</b> caché sous un <b>Mur ⬛</b> ne s'additionne <u>pas</u> dans les sommes des bords, mais il compte pour le Sudoku (unicité) !";
         return;
     }
 
@@ -728,15 +812,15 @@ function updateGuideBanner() {
         if (isLineFullyAndCorrectlySolved(true, r)) continue;
         const clues = state.rowClues[r];
         if (clues.length === 1 && clues[0] === maxSum) {
-            text.innerHTML = `💡 <b>Astuce :</b> La ligne ${r + 1} fait <b>${maxSum}</b> : elle ne contient <b>aucun mur</b> !`;
+            text.innerHTML = `💡 <b>Astuce :</b> La ligne ${r + 1} a une somme de <b>${maxSum}</b> (1+2+...=${maxSum}) : elle ne contient donc <b>aucun mur</b> !`;
             return;
         }
         if (clues.length > 1) {
-            text.innerHTML = `💡 <b>Astuce :</b> Ligne ${r + 1} (<b>${clues.join(' - ')}</b>) : place un <b>⬛ Mur</b> pour séparer les sommes. Le chiffre gravé 🔒 sous un mur compte pour le Sudoku mais pas dans la somme.`;
+            text.innerHTML = `💡 <b>Astuce :</b> Ligne ${r + 1} (<b>${clues.join(' - ')}</b>) : place un <b>⬛ Mur</b> entre ces sommes. Le chiffre caché sous le mur ne compte pas dans la somme, mais compte pour le Sudoku !`;
             return;
         }
     }
-    text.innerHTML = `💡 <b>Astuce :</b> Chaque chiffre de 1 à ${N} est unique par ligne et par colonne (y compris les chiffres gravés 🔒 sous les murs) !`;
+    text.innerHTML = `💡 <b>Astuce :</b> Chaque chiffre de 1 à ${N} est unique par ligne et par colonne, même s'il est caché sous un Mur ⬛ !`;
 }
 
 // --- ACTIONS JOUEUR ---
@@ -815,7 +899,6 @@ function handleErase() {
     renderAll();
 }
 
-// Bouton Vérifier non-bloquant (indique aussi combien de cases restent à remplir)
 document.getElementById('btn-verify').addEventListener('click', () => {
     state.usedVerifyThisGrid = true;
     saveCurrentGridSnapshot();
@@ -866,7 +949,6 @@ document.getElementById('btn-verify').addEventListener('click', () => {
     }
 });
 
-// --- GESTION DES VIES ---
 function penalizeError(msg) {
     state.errorsThisGrid++;
     state.lives--;
@@ -906,7 +988,6 @@ function checkLineWaveAndVictory(r, c, wasRowSolved, wasColSolved) {
         if (!isLineFullyAndCorrectlySolved(true, i) || !isLineFullyAndCorrectlySolved(false, i)) return;
     }
 
-    // Transition explicite entre l'étape 1/2 et l'étape 2/2 du Mode 0
     if (!state.isDaily && state.mode === 0 && state.tutorialStep === 0) {
         delete state.savedGridsByKey[getGridKey()];
         state.tutorialStep = 1;
@@ -1294,25 +1375,57 @@ document.getElementById('btn-new-grid').addEventListener('click', () => {
     });
 });
 
+// --- CLIC SUR PUZZLE DU JOUR : DEMANDER SI LE JOUEUR CONNAÎT LES RÈGLES ---
+function promptDailyPuzzleCheck() {
+    document.getElementById('modal-daily-check').classList.remove('hidden');
+}
+
 document.getElementById('btn-daily').addEventListener('click', () => {
+    if (state.isDaily) {
+        // Si déjà sur le Défi du jour, un second clic ramène au mode normal en cours
+        saveCurrentGridSnapshot();
+        state.isDaily = false;
+        saveProgress();
+        generatePuzzle(false);
+        return;
+    }
+    promptDailyPuzzleCheck();
+});
+
+document.getElementById('btn-daily-know-yes').addEventListener('click', () => {
+    document.getElementById('modal-daily-check').classList.add('hidden');
     saveCurrentGridSnapshot();
-    state.isDaily = !state.isDaily;
+    state.isDaily = true;
     saveProgress();
     generatePuzzle(false);
 });
 
-// --- NAVIGATION COMPLÈTE AU CLAVIER ---
+document.getElementById('btn-daily-know-no').addEventListener('click', () => {
+    document.getElementById('modal-daily-check').classList.add('hidden');
+    openRulesModal(0, true);
+});
+
+document.getElementById('btn-daily-cancel').addEventListener('click', () => {
+    document.getElementById('modal-daily-check').classList.add('hidden');
+});
+
+// --- NAVIGATION CLAVIER (INCLUANT LES FLÈCHES DANS LE CARROUSEL DE RÈGLES) ---
 window.addEventListener('keydown', (e) => {
-    // Si l'utilisateur tape dans le champ de code secret, ne pas intercepter
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
 
-    // Échap ferme les modales ouvertes
+    const rulesModal = document.getElementById('modal-rules');
+    if (!rulesModal.classList.contains('hidden')) {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); setRuleSlide(currentRuleSlide - 1); return; }
+        if (e.key === 'ArrowRight') { e.preventDefault(); setRuleSlide(currentRuleSlide + 1); return; }
+        if (e.key === 'Escape') { e.preventDefault(); document.getElementById('btn-close-rules').click(); return; }
+        return;
+    }
+
     if (e.key === 'Escape') {
         document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
         return;
     }
 
-    // Si une modale est ouverte, Entrée valide le bouton principal
     const endModal = document.getElementById('modal-end');
     if (!endModal.classList.contains('hidden') && e.key === 'Enter') {
         document.getElementById('btn-next-level').click();
@@ -1330,6 +1443,7 @@ window.addEventListener('keydown', (e) => {
     else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); handleErase(); }
     else if (e.key === ' ' || e.key.toLowerCase() === 'm' || e.key.toLowerCase() === 'w') { e.preventDefault(); applyWallOnSelectedTile(); }
     else if (e.key.toLowerCase() === 'n') { e.preventDefault(); setTool(state.tool === 'num' ? 'note' : 'num'); }
+    else if (e.key === '?') { e.preventDefault(); openRulesModal(0, state.mode !== 0); }
     else {
         const up = e.key.toUpperCase();
         const idx = SYMBOLS.indexOf(up);
@@ -1379,9 +1493,9 @@ function renderModesTab() {
         if (unlocked) {
             div.querySelector('button').addEventListener('click', () => {
                 if (!state.isDaily && state.mode === m.id) {
-                    // Si on reclique sur Mode 0, proposer de reprendre à l'étape 1/2
-                    if (m.id === 0 && state.tutorialStep === 1) {
+                    if (m.id === 0) {
                         state.tutorialStep = 0;
+                        state.hasSeenIntroRules = false;
                         saveProgress();
                         document.getElementById('modal-hub').classList.add('hidden');
                         generatePuzzle(true);
@@ -1393,7 +1507,10 @@ function renderModesTab() {
                 saveCurrentGridSnapshot();
                 state.isDaily = false;
                 state.mode = m.id;
-                if (m.id === 0) state.tutorialStep = 0;
+                if (m.id === 0) {
+                    state.tutorialStep = 0;
+                    state.hasSeenIntroRules = false;
+                }
                 saveProgress();
                 document.getElementById('modal-hub').classList.add('hidden');
                 generatePuzzle(false);
@@ -1494,7 +1611,6 @@ document.getElementById('toggle-engraved').addEventListener('change', (e) => {
     renderAll();
 });
 
-// Champ code secret : accepte le code donateur (hashé) OU active les outils de test si on tape TEST / DEBUG
 document.getElementById('btn-secret-code').addEventListener('click', () => {
     const val = document.getElementById('secret-code-input').value.trim().toUpperCase();
     if (val === 'TEST' || val === 'DEBUG') {
@@ -1517,7 +1633,6 @@ document.getElementById('btn-secret-code').addEventListener('click', () => {
     }
 });
 
-// Activation discrète des outils de test en touchant 5 fois "Créé par Hazraael"
 let footerTapCount = 0;
 document.getElementById('footer-credits').addEventListener('click', () => {
     footerTapCount++;
@@ -1529,11 +1644,10 @@ document.getElementById('footer-credits').addEventListener('click', () => {
     }
 });
 
-// Réinitialisation propre pour un joueur
 document.getElementById('btn-player-reset').addEventListener('click', () => {
     showConfirmModal(
         "🗑️ Réinitialiser la progression",
-        "Voulez-vous vraiment effacer votre progression et recommencer depuis le tutoriel ?",
+        "Voulez-vous vraiment effacer votre progression et revoir les règles depuis le tutoriel ?",
         () => {
             localStorage.removeItem(SAVE_KEY);
             state = getDefaultState();
@@ -1545,7 +1659,6 @@ document.getElementById('btn-player-reset').addEventListener('click', () => {
     );
 });
 
-// --- OUTILS DE TEST DÉVELOPPEUR ---
 document.getElementById('btn-debug-unlock').addEventListener('click', () => {
     state.allUnlockedTest = true;
     state.devUnlocked = true;
@@ -1582,7 +1695,6 @@ function isThemeUnlocked(id) {
 function applyTheme(themeId) {
     if (themeId === 'theme-neon') themeId = 'theme-slate';
     state.theme = themeId;
-    // Conserve toujours la classe 'game-screen' pour ne pas casser la mise en page
     document.body.className = `game-screen ${themeId}`;
     const tObj = THEMES.find(t => t.id === themeId) || THEMES[0];
     document.getElementById('icon-b1').textContent = tObj.icons[0];
@@ -1600,14 +1712,18 @@ document.querySelectorAll('.close-modal-btn').forEach(btn => {
     }
 });
 
-// Enregistrement du mode Hors-Ligne (PWA)
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// Lancement (avec détection de ?daily=1 ou ?debug=1)
+// Lancement (avec vérification des règles si l'utilisateur arrive via ?daily=1)
 loadProgress();
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('daily') === '1') state.isDaily = true;
 if (urlParams.get('debug') === '1') state.debugVisible = true;
-generatePuzzle(false);
+
+if (urlParams.get('daily') === '1') {
+    generatePuzzle(false);
+    promptDailyPuzzleCheck();
+} else {
+    generatePuzzle(false);
+}

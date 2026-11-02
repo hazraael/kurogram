@@ -18,7 +18,7 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
         
-        /* Force le défilement vertical fluide sur Android et iOS */
+        /* Défilement vertical fluide garanti sur Android et iOS */
         html, body {
             width: 100%;
             height: auto !important;
@@ -34,7 +34,7 @@
         body { padding: 14px 12px 48px; }
         .container { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
         
-        /* HERO COMPACT SUR MOBILE */
+        /* HERO COMPACT */
         .hero {
             background: var(--dark); color: #f4f1ea; padding: 18px; border-radius: 16px;
             display: flex; align-items: center; gap: 16px;
@@ -64,10 +64,32 @@
         .btn-apk { background: #2e7d32; box-shadow: 0 3px 0 #1b4d1e; }
         .btn-daily { background: #d35400; box-shadow: 0 3px 0 #873600; }
 
-        /* SECTIONS INFOS & CHANGELOG */
+        /* SECTIONS INFOS, RÈGLES & CHANGELOG */
         .section-box { background: #fff; padding: 18px; border-radius: 14px; box-shadow: 0 3px 0 #d5cfc0; }
         .section-box h2 { font-size: 1.1rem; margin-bottom: 10px; color: var(--accent); border-bottom: 2px solid var(--card); padding-bottom: 5px; }
         .steps-list { padding-left: 18px; font-size: 0.86rem; display: flex; flex-direction: column; gap: 5px; }
+
+        /* RÉSUMÉ VISUEL DES 3 RÈGLES */
+        .rules-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 8px; }
+        .rule-pill { background: var(--bg); padding: 12px; border-radius: 10px; font-size: 0.84rem; border-left: 4px solid var(--accent); }
+        .rule-pill strong { display: block; margin-bottom: 4px; color: var(--dark); font-size: 0.9rem; }
+        .demo-line {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            background: var(--card); padding: 10px; border-radius: 10px; margin-top: 12px; flex-wrap: wrap;
+        }
+        .demo-clue { background: #dcd6c8; padding: 6px 10px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; }
+        .demo-tile {
+            width: 36px; height: 36px; background: #fff; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; box-shadow: 0 3px 0 #c7c0b0;
+        }
+        .demo-wall {
+            width: 36px; height: 36px; background: var(--dark); color: #8c8c8c; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-style: italic; font-size: 0.85rem;
+            box-shadow: inset 0 3px 5px #141414; position: relative;
+        }
+        .demo-wall small { position: absolute; bottom: 1px; right: 2px; font-size: 0.45rem; font-style: normal; }
         
         .version-item { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px dashed #ddd; }
         .version-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
@@ -85,7 +107,7 @@
         <header class="hero">
             <img src="icon-192.png" alt="Icône KuroGram">
             <div class="hero-text">
-                <span class="badge">Version 1.1.0 Disponible</span>
+                <span class="badge">Version 1.2.0 Disponible</span>
                 <h1>KuroGram</h1>
                 <p>Le casse-tête logique qui fusionne l'unicité du <strong>Sudoku</strong>, les sommes du <strong>Kakuro</strong> et les murs cachés du <strong>Nonogram</strong>.</p>
             </div>
@@ -98,13 +120,13 @@
                     <h2>🤖 Android (APK)</h2>
                     <p>Téléchargez et installez directement le fichier APK officiel sur votre smartphone ou tablette Android.</p>
                 </div>
-                <a href="KuroGram.apk" download class="btn btn-apk">📥 Télécharger l'APK (v1.1)</a>
+                <a href="KuroGram.apk" download class="btn btn-apk">📥 Télécharger l'APK (v1.2)</a>
             </div>
 
             <div class="card">
                 <div>
                     <h2>📅 Exercice du Jour</h2>
-                    <p>Chaque jour, une nouvelle grille 5x5 identique pour tous les joueurs directement dans votre navigateur.</p>
+                    <p>Chaque jour, une grille 5x5 commune à tous les joueurs. Possibilité de réviser les règles illustrées avant de commencer !</p>
                 </div>
                 <a href="index.html?daily=1" class="btn btn-daily">🔥 Jouer au Défi du Jour</a>
             </div>
@@ -112,9 +134,38 @@
             <div class="card">
                 <div>
                     <h2>🍏 iPhone / Navigateur</h2>
-                    <p>Lancez le jeu complet et ajoutez-le sur l'écran d'accueil de votre iPhone pour y jouer plein écran hors-ligne.</p>
+                    <p>Lancez le tutoriel interactif et ajoutez le jeu sur l'écran d'accueil de votre iPhone pour jouer plein écran hors-ligne.</p>
                 </div>
                 <a href="index.html" class="btn">▶️ Ouvrir KuroGram</a>
+            </div>
+        </section>
+
+        <!-- LES 3 RÈGLES EN UN COUP D'ŒIL -->
+        <section class="section-box">
+            <h2>📖 Les 3 Règles d'Or en un coup d'œil</h2>
+            <div class="rules-summary">
+                <div class="rule-pill">
+                    <strong>1. Règle Sudoku (Unicité)</strong>
+                    Chaque ligne et colonne contient tous les chiffres de <code>1</code> à <code>N</code> une seule fois, <b>y compris le chiffre caché sous un Mur ⬛</b> !
+                </div>
+                <div class="rule-pill">
+                    <strong>2. Règle Nonogram (Murs)</strong>
+                    Des <b>Murs noirs ⬛</b> découpent la grille et séparent les blocs de cases blanches lorsque l'indice affiche plusieurs nombres.
+                </div>
+                <div class="rule-pill">
+                    <strong>3. Règle Kakuro (Sommes)</strong>
+                    Les indices indiquent la somme des cases blanches de chaque bloc. <b>Le chiffre caché sous un Mur ne s'additionne jamais !</b>
+                </div>
+            </div>
+            <div class="demo-line">
+                <span class="demo-clue">1 - 7</span>
+                <span class="demo-tile">1</span>
+                <span class="demo-wall">2<small>🔒</small></span>
+                <span class="demo-tile">3</span>
+                <span class="demo-tile">4</span>
+                <span style="font-size: 0.8rem; margin-left: 6px;">
+                    👉 Le <b>2🔒</b> est caché sous le mur (les chiffres 1, 2, 3, 4 sont tous utilisés), et les blocs blancs font <b>1</b> puis <b>3 + 4 = 7</b> !
+                </span>
             </div>
         </section>
 
@@ -147,13 +198,25 @@
 
             <div class="version-item">
                 <div class="version-header">
+                    <span class="version-tag">Version 1.2.0 — Aide Visuelle Interactive & Défi Guidé</span>
+                    <span class="version-date">Novembre 2026</span>
+                </div>
+                <ul class="version-notes">
+                    <li><strong>Bouton d'aide « ? » & Carrousel Visuel :</strong> Ajout d'un guide illustré en 3 diapositives (glissement au doigt, souris ou flèches) présentant un exemple correct et un exemple incorrect pour chacune des 3 règles.</li>
+                    <li><strong>Accueil du Défi du Jour :</strong> Demande désormais si le joueur connaît déjà les règles avant de lancer le puzzle quotidien, avec accès direct au guide visuel ou au tutoriel.</li>
+                    <li><strong>Clarté du Tutoriel (Mode 0) :</strong> Ouverture automatique des règles illustrées au premier démarrage et explication détaillée du double rôle des murs (exclus des sommes Kakuro mais comptabilisés pour l'unicité Sudoku).</li>
+                </ul>
+            </div>
+
+            <div class="version-item">
+                <div class="version-header">
                     <span class="version-tag">Version 1.1.0 — Correctifs & Ergonomie</span>
                     <span class="version-date">Novembre 2026</span>
                 </div>
                 <ul class="version-notes">
-                    <li><strong>Notifications intégrées :</strong> Remplacement des boîtes de dialogue système par des bannières fluides non-bloquantes et décompte des cases restantes lors de la vérification.</li>
-                    <li><strong>Lisibilité des murs gravés :</strong> Distinction visuelle des chiffres gravés sous les murs (cadre creusé + indicateur 🔒) et explication détaillée dans le tutoriel.</li>
-                    <li><strong>Continuité & Clavier :</strong> Synchronisation automatique entre onglets, transition guidée entre les étapes du Mode 0 et support complet du clavier (Flèches, chiffres, Espace/M, Échap).</li>
+                    <li><strong>Notifications intégrées :</strong> Remplacement des boîtes de dialogue système par des bannières fluides et décompte des cases restantes lors de la vérification.</li>
+                    <li><strong>Lisibilité des murs gravés :</strong> Distinction visuelle des chiffres gravés sous les murs (cadre creusé + indicateur 🔒).</li>
+                    <li><strong>Continuité & Clavier :</strong> Synchronisation automatique entre onglets et support complet du clavier.</li>
                 </ul>
             </div>
 
