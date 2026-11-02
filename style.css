@@ -6,7 +6,7 @@
     --tile-text: #2c3539;
     --wall-bg: #2b2b2b;
     --wall-inner-shadow: #141414;
-    --wall-engraved: #686868;
+    --wall-engraved: #8c8c8c;
     --clue-bg: #e9e4d8;
     --clue-text: #3d352e;
     --accent: #4a6b82;
@@ -20,7 +20,7 @@ body.theme-stone {
     --tile-text: #1c1c1c;
     --wall-bg: #16181a;
     --wall-inner-shadow: #090a0b;
-    --wall-engraved: #52585e;
+    --wall-engraved: #737b82;
     --clue-bg: #383d42;
     --clue-text: #e0dcd0;
     --accent: #c08552;
@@ -34,23 +34,30 @@ body.theme-slate {
     --tile-text: #e6e1d6;
     --wall-bg: #0c0e12;
     --wall-inner-shadow: #050608;
-    --wall-engraved: #3a414d;
+    --wall-engraved: #626d80;
     --clue-bg: #20242b;
     --clue-text: #d4af37;
     --accent: #b89230;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: system-ui, -apple-system, sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
 
+/* Par défaut, les pages peuvent défiler librement sur mobile */
 html, body {
     width: 100%;
-    height: 100dvh;
-    overflow: hidden;
+    min-height: 100dvh;
     background-color: var(--bg-main);
     color: var(--tile-text);
+    transition: background-color 0.3s;
+}
+
+/* Seul l'écran de jeu principal verrouille la hauteur à 100dvh */
+body.game-screen {
+    height: 100dvh;
+    overflow: hidden;
+    user-select: none;
     display: flex;
     justify-content: center;
-    transition: background-color 0.3s;
 }
 
 #app {
@@ -63,6 +70,54 @@ html, body {
     padding: 8px 10px 6px 10px;
     gap: 6px;
     overflow: hidden;
+}
+
+/* NOTIFICATIONS INTÉGRÉES (TOASTS NON-BLOQUANTS) */
+.toast-container {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 250;
+    width: 92%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+}
+.toast {
+    pointer-events: auto;
+    background: #2c3539;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.35;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-left: 5px solid var(--accent);
+    animation: toastIn 0.2s ease;
+}
+.toast.toast-success { border-left-color: #2ecc71; background: #1e3a28; }
+.toast.toast-warn { border-left-color: #f39c12; background: #3a2e18; }
+.toast.toast-error { border-left-color: #e74c3c; background: #3d1c1c; }
+.toast-close {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 3px 7px;
+    cursor: pointer;
+    font-weight: 800;
+}
+@keyframes toastIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* EN-TÊTE UNIFIÉ */
@@ -106,7 +161,7 @@ html, body {
 /* BANDEAU TUTORIEL COMPACT */
 .guide-banner {
     background: var(--accent); color: #fff; padding: 7px 10px;
-    border-radius: 8px; font-size: 0.78rem; line-height: 1.25;
+    border-radius: 8px; font-size: 0.77rem; line-height: 1.3;
     flex-shrink: 0;
 }
 .hidden { display: none !important; }
@@ -180,14 +235,34 @@ html, body {
 }
 .tile.selected { outline: 2.5px solid var(--accent); z-index: 2; }
 
-/* CASE MUR */
+/* CASE MUR ET CHIFFRE GRAVÉ DISTINCTIF */
 .tile.wall {
-    background: var(--wall-bg); color: var(--wall-engraved);
+    background: var(--wall-bg);
+    color: var(--wall-engraved);
     transform: translateY(2px);
     box-shadow: inset 0 3px 6px var(--wall-inner-shadow);
 }
 .compact-grid .tile.wall { transform: translateY(1px); }
-.tile.wall.hide-engraved .tile-value { visibility: hidden; }
+
+/* Style gravé dans la pierre avec petit cadenas pour ne jamais le confondre avec un chiffre blanc */
+.tile.wall .tile-value {
+    font-size: 0.82em;
+    font-style: italic;
+    padding: 1px 5px;
+    border: 1px dashed rgba(255,255,255,0.18);
+    border-radius: 4px;
+    background: rgba(0,0,0,0.25);
+}
+.wall-lock-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+    font-size: 0.48rem;
+    opacity: 0.65;
+    pointer-events: none;
+}
+.tile.wall.hide-engraved .tile-value,
+.tile.wall.hide-engraved .wall-lock-badge { visibility: hidden; }
 
 /* NOTES CANDIDATS */
 .notes-grid {
@@ -237,15 +312,12 @@ html, body {
 .tool-btn.wall-action-btn { background: var(--wall-bg); color: #fff; }
 .tool-btn.verify-btn { background: #2e7d32; color: #fff; }
 
-/* PAVÉ NUMÉRIQUE + INDICE DÉCIMAL SUR LES TOUCHES LETTRES (A=10..G=16) */
 .numpad {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(36px, 1fr));
     gap: 4px;
 }
-.numpad.hexa-pad {
-    grid-template-columns: repeat(9, 1fr);
-}
+.numpad.hexa-pad { grid-template-columns: repeat(9, 1fr); }
 .num-btn {
     position: relative;
     height: 38px;
@@ -256,14 +328,9 @@ html, body {
 }
 .num-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--tile-side); }
 .num-sub {
-    position: absolute;
-    top: 2px;
-    right: 3px;
-    font-size: 0.56rem;
-    font-weight: 800;
-    color: var(--accent);
-    line-height: 1;
-    opacity: 0.9;
+    position: absolute; top: 2px; right: 3px;
+    font-size: 0.56rem; font-weight: 800; color: var(--accent);
+    line-height: 1; opacity: 0.9;
 }
 
 .bonus-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -277,9 +344,9 @@ html, body {
 .bonus-count { background: var(--accent); color: #fff; font-size: 0.7rem; padding: 1px 5px; border-radius: 8px; }
 .bonus-count.empty-count { background: #c0392b; }
 
-.credits { text-align: center; font-size: 0.68rem; opacity: 0.65; color: var(--clue-text); line-height: 1; }
+.credits { text-align: center; font-size: 0.68rem; opacity: 0.7; color: var(--clue-text); line-height: 1; cursor: pointer; }
 
-/* MODALES & STATISTIQUES PAR TAILLE */
+/* MODALES */
 .modal {
     position: fixed; inset: 0; background: rgba(0,0,0,0.65);
     display: flex; justify-content: center; align-items: center; padding: 12px; z-index: 100;
@@ -321,7 +388,7 @@ html, body {
     background: #111; color: #fff; padding: 20px; border-radius: 10px;
     display: flex; flex-direction: column; align-items: center; gap: 8px; font-weight: 700;
 }
-.ad-spinner { font-size: 1.8rem; animation: pulse 1s infinite; }
+.ad-spinner { font-size: 1.8rem; }
 .end-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 
 .mode-item, .theme-item, .ach-item {
