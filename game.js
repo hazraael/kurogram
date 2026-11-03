@@ -1,4 +1,4 @@
-// KUROGRAM - Moteur principal (v1.3.0 i18n + Unlocks) - Créé par Hazraael
+// KUROGRAM - Moteur principal (v1.3.1 Fix Daily Launch) - Créé par Hazraael
 const SYMBOLS = ['1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G'];
 const SAVE_KEY = 'kurogram_hazraael_v7';
 const MAX_LIVES = 4;
@@ -48,7 +48,6 @@ function showUnlockNotification(detailHtml) {
     if (dot) dot.classList.remove('hidden');
 }
 
-// Capture l'état actuel des déblocages pour détecter tout nouveau palier franchi
 function getUnlockStateMap() {
     const totalWins = state.stats?.global?.gamesWon || 0;
     return {
@@ -68,7 +67,6 @@ function getUnlockStateMap() {
 function checkAndNotifyNewUnlocks(beforeMap) {
     const afterMap = getUnlockStateMap();
 
-    // Modes 3 à 6
     [3, 4, 5, 6].forEach(mId => {
         const key = `mode_${mId}`;
         if (!beforeMap[key] && afterMap[key]) {
@@ -77,7 +75,6 @@ function checkAndNotifyNewUnlocks(beforeMap) {
         }
     });
 
-    // Thèmes
     if (!beforeMap.theme_stone && afterMap.theme_stone) {
         showUnlockNotification(t('unlockThemeMsg', { name: t('themeStoneName') }));
     }
@@ -85,7 +82,6 @@ function checkAndNotifyNewUnlocks(beforeMap) {
         showUnlockNotification(t('unlockThemeMsg', { name: t('themeSlateName') }));
     }
 
-    // Hauts-Faits
     if (!beforeMap.ach_pure && afterMap.ach_pure) {
         showUnlockNotification(t('unlockAchMsg', { name: t('achPureName') }));
     }
@@ -110,14 +106,13 @@ function applyLanguage(lang) {
     const langSelect = document.getElementById('lang-selector');
     if (langSelect) langSelect.value = lang;
 
-    // Traduire tous les éléments HTML statiques ayant data-i18n
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         el.textContent = t(key);
     });
 
-    // Info-bulles et placeholders
     document.getElementById('streak-badge').title = t('streakTitle');
+    document.getElementById('streak-badge').textContent = `🔥 ${state.streak}${lang === 'fr' ? 'j' : 'd'}`;
     document.getElementById('btn-help').title = t('helpTitle');
     document.getElementById('btn-new-grid').title = t('newGridTitle');
     document.getElementById('btn-daily').title = t('dailyTitle');
@@ -125,14 +120,12 @@ function applyLanguage(lang) {
     document.getElementById('secret-code-input').placeholder = t('secretPlaceholder');
     document.getElementById('daily-check-desc').innerHTML = t('dailyCheckDesc');
 
-    // Injecter les 3 diapositives du carrousel des règles dans la langue active
     const slides = document.querySelectorAll('#rules-carousel .rule-slide');
     const slidesContent = RULES_SLIDES_HTML[lang] || RULES_SLIDES_HTML.fr;
     slides.forEach((s, idx) => {
         if (slidesContent[idx]) s.innerHTML = slidesContent[idx];
     });
 
-    // Mettre à jour le filtre des tailles dans l'onglet Statistiques
     const filterEl = document.getElementById('stats-size-filter');
     if (filterEl) {
         const prevVal = filterEl.value || 'global';
@@ -146,7 +139,9 @@ function applyLanguage(lang) {
 
     applyTheme(state.theme);
     updateUIStatus();
-    updateGuideBanner();
+    if (state.solutionNumbers && state.solutionNumbers.length > 0) {
+        updateGuideBanner();
+    }
 }
 
 document.getElementById('lang-selector').addEventListener('change', (e) => {
@@ -209,6 +204,7 @@ let state = getDefaultState();
 let timerInterval = null;
 let adCountdownInterval = null;
 let currentRuleSlide = 0;
+let pendingDailyLaunchAfterRules = false;
 
 function hashSecret(str) {
     let h = 2166136261;
@@ -235,6 +231,7 @@ function setRuleSlide(idx) {
 }
 
 document.getElementById('btn-help').addEventListener('click', () => {
+    pendingDailyLaunchAfterRules = false;
     openRulesModal(0, state.mode !== 0 || state.isDaily);
 });
 document.getElementById('rule-prev').addEventListener('click', () => setRuleSlide(currentRuleSlide - 1));
@@ -246,11 +243,20 @@ document.querySelectorAll('.carousel-dot').forEach(dot => {
 
 document.getElementById('btn-close-rules').addEventListener('click', () => {
     state.hasSeenIntroRules = true;
-    saveProgress();
     document.getElementById('modal-rules').classList.add('hidden');
+    if (pendingDailyLaunchAfterRules) {
+        pendingDailyLaunchAfterRules = false;
+        saveCurrentGridSnapshot();
+        state.isDaily = true;
+        saveProgress();
+        generatePuzzle(false);
+    } else {
+        saveProgress();
+    }
 });
 
 document.getElementById('btn-rules-start-tuto').addEventListener('click', () => {
+    pendingDailyLaunchAfterRules = false;
     state.hasSeenIntroRules = true;
     saveCurrentGridSnapshot();
     state.isDaily = false;
@@ -465,7 +471,7 @@ function updateDailyStreak() {
         saveProgress();
         checkAndNotifyNewUnlocks(beforeUnlocks);
     }
-    document.getElementById('streak-badge').textContent = `🔥 ${state.streak}d`;
+    document.getElementById('streak-badge').textContent = `🔥 ${state.streak}${currentLang === 'fr' ? 'j' : 'd'}`;
 }
 
 let currentSeed = Date.now();
@@ -809,7 +815,8 @@ function updateGuideBanner() {
     banner.classList.remove('hidden');
 
     if (state.mode === 0 && state.tutorialStep === 0) {
-        text.innerHTML = state.playerWalls[0][1] ? t('tutoStep1WallPlaced') : t('tutoStep1Start');
+        const wallPlaced = Boolean(state.playerWalls?.[0]?.[1]);
+        text.innerHTML = wallPlaced ? t('tutoStep1WallPlaced') : t('tutoStep1Start');
         return;
     }
     if (state.mode === 0 && state.tutorialStep === 1) {
@@ -820,8 +827,8 @@ function updateGuideBanner() {
     const N = state.size;
     const maxSum = (N * (N + 1)) / 2;
     for (let r = 0; r < N; r++) {
-        if (isLineFullyAndCorrectlySolved(true, r)) continue;
-        const clues = state.rowClues[r];
+        const clues = state.rowClues?.[r];
+        if (!clues || isLineFullyAndCorrectlySolved(true, r)) continue;
         if (clues.length === 1 && clues[0] === maxSum) {
             text.innerHTML = t('hintNoWall', { r: r + 1, sum: maxSum });
             return;
@@ -1181,7 +1188,6 @@ function applyVictoryStatsToBucket(bucket, timed, elapsed) {
 function onGridVictory() {
     delete state.savedGridsByKey[getGridKey()];
 
-    // Photo des déblocages AVANT d'incrémenter les compteurs de victoire
     const beforeUnlocks = getUnlockStateMap();
 
     const timed = isTimedMode();
@@ -1219,7 +1225,6 @@ function onGridVictory() {
     saveProgress();
     updateUIStatus();
 
-    // Déclencher les notifications dorées si un Mode, Thème ou Haut-Fait vient d'être débloqué !
     checkAndNotifyNewUnlocks(beforeUnlocks);
 
     const msg = timed
@@ -1353,6 +1358,7 @@ document.getElementById('btn-daily').addEventListener('click', () => {
 });
 
 document.getElementById('btn-daily-know-yes').addEventListener('click', () => {
+    pendingDailyLaunchAfterRules = false;
     document.getElementById('modal-daily-check').classList.add('hidden');
     saveCurrentGridSnapshot();
     state.isDaily = true;
@@ -1361,11 +1367,13 @@ document.getElementById('btn-daily-know-yes').addEventListener('click', () => {
 });
 
 document.getElementById('btn-daily-know-no').addEventListener('click', () => {
+    pendingDailyLaunchAfterRules = true;
     document.getElementById('modal-daily-check').classList.add('hidden');
     openRulesModal(0, true);
 });
 
 document.getElementById('btn-daily-cancel').addEventListener('click', () => {
+    pendingDailyLaunchAfterRules = false;
     document.getElementById('modal-daily-check').classList.add('hidden');
 });
 
@@ -1662,11 +1670,17 @@ if ('serviceWorker' in navigator) {
 }
 
 // Lancement
-loadProgress();
 const urlParams = new URLSearchParams(window.location.search);
+const isDirectDaily = urlParams.get('daily') === '1';
+
+loadProgress();
 if (urlParams.get('debug') === '1') state.debugVisible = true;
-if (urlParams.get('daily') === '1') {
+
+if (isDirectDaily) {
+    const prevSeen = state.hasSeenIntroRules;
+    state.hasSeenIntroRules = true;
     generatePuzzle(false);
+    state.hasSeenIntroRules = prevSeen;
     promptDailyPuzzleCheck();
 } else {
     generatePuzzle(false);
