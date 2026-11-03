@@ -70,7 +70,7 @@ body.game-screen {
     overflow: hidden;
 }
 
-/* NOTIFICATIONS INTÉGRÉES */
+/* NOTIFICATIONS INTÉGRÉES & BANNIÈRE DORÉE DE DÉBLOCAGE */
 .toast-container {
     position: fixed;
     top: 12px;
@@ -99,11 +99,25 @@ body.game-screen {
     align-items: center;
     gap: 10px;
     border-left: 5px solid var(--accent);
-    animation: toastIn 0.2s ease;
+    animation: toastIn 0.25s ease;
 }
 .toast.toast-success { border-left-color: #2ecc71; background: #1e3a28; }
 .toast.toast-warn { border-left-color: #f39c12; background: #3a2e18; }
 .toast.toast-error { border-left-color: #e74c3c; background: #3d1c1c; }
+
+/* Style festif pour le déblocage d'un Mode, Thème ou Haut-Fait */
+.toast.toast-unlock {
+    background: linear-gradient(135deg, #2c220e 0%, #4a3510 100%);
+    border: 2px solid #f1c40f;
+    border-left: 6px solid #f1c40f;
+    color: #fff8e7;
+    box-shadow: 0 8px 24px rgba(241, 196, 15, 0.35);
+    animation: unlockPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes unlockPop {
+    0% { opacity: 0; transform: scale(0.85) translateY(-15px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
 .toast-close {
     background: rgba(255,255,255,0.15);
     color: #fff;
@@ -124,43 +138,56 @@ body.game-screen {
     justify-content: space-between;
     align-items: center;
     background: var(--clue-bg);
-    padding: 6px 10px;
+    padding: 6px 8px;
     border-radius: 10px;
     flex-shrink: 0;
 }
 .brand-col { display: flex; flex-direction: column; gap: 2px; }
-.brand-line { display: flex; align-items: center; gap: 6px; }
-.brand-line h1 { font-size: 1.15rem; letter-spacing: 0.5px; color: var(--clue-text); }
-#streak-badge { background: var(--bg-main); padding: 2px 6px; border-radius: 10px; font-size: 0.72rem; font-weight: bold; color: var(--clue-text); }
-#lives-container { font-size: 0.74rem; letter-spacing: -1px; }
+.brand-line { display: flex; align-items: center; gap: 5px; }
+.brand-line h1 { font-size: 1.1rem; letter-spacing: 0.5px; color: var(--clue-text); }
+#streak-badge { background: var(--bg-main); padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; color: var(--clue-text); }
+#lives-container { font-size: 0.72rem; letter-spacing: -1px; }
 
-.sub-status { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 700; color: var(--accent); }
-.size-selector {
+.sub-status { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 700; color: var(--accent); }
+.size-selector, .lang-selector {
     background: var(--tile-top); color: var(--tile-text);
-    border: 1px solid var(--tile-side); border-radius: 5px;
-    padding: 2px 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer;
+    border: 1px solid var(--tile-side); border-radius: 6px;
+    padding: 3px 5px; font-weight: 700; font-size: 0.74rem; cursor: pointer;
 }
 
-.header-actions { display: flex; align-items: center; gap: 5px; }
+.header-actions { display: flex; align-items: center; gap: 4px; }
 .timer-pill {
     background: var(--bg-main); color: var(--accent);
-    padding: 5px 7px; border-radius: 7px; font-size: 0.78rem;
+    padding: 5px 6px; border-radius: 7px; font-size: 0.75rem;
     font-weight: 800; font-variant-numeric: tabular-nums;
 }
 .icon-btn {
+    position: relative;
     background: var(--tile-top); color: var(--clue-text);
-    border: none; padding: 6px 8px; border-radius: 7px;
-    font-size: 0.95rem; cursor: pointer; box-shadow: 0 2px 0 var(--tile-side);
+    border: none; padding: 6px 7px; border-radius: 7px;
+    font-size: 0.92rem; cursor: pointer; box-shadow: 0 2px 0 var(--tile-side);
 }
 .icon-btn:active { transform: translateY(2px); box-shadow: none; }
 .icon-btn.active-daily { background: var(--accent); color: #fff; }
-.help-btn {
-    font-weight: 900;
-    background: #d35400;
-    color: #fff;
-    min-width: 30px;
-}
+.help-btn { font-weight: 900; background: #d35400; color: #fff; min-width: 28px; }
 .menu-btn { font-weight: 900; background: var(--accent); color: #fff; }
+
+/* Pastille lumineuse sur le bouton menu ☰ quand un nouveau déblocage est disponible */
+.unlock-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 11px;
+    height: 11px;
+    background: #f1c40f;
+    border: 2px solid #c0392b;
+    border-radius: 50%;
+    animation: dotPulse 1s infinite alternate;
+}
+@keyframes dotPulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.3); }
+}
 
 /* BANDEAU TUTORIEL COMPACT */
 .guide-banner {
@@ -257,12 +284,8 @@ body.game-screen {
     background: rgba(0,0,0,0.25);
 }
 .wall-lock-badge {
-    position: absolute;
-    bottom: 2px;
-    right: 3px;
-    font-size: 0.48rem;
-    opacity: 0.65;
-    pointer-events: none;
+    position: absolute; bottom: 2px; right: 3px;
+    font-size: 0.48rem; opacity: 0.65; pointer-events: none;
 }
 .tile.wall.hide-engraved .tile-value,
 .tile.wall.hide-engraved .wall-lock-badge { visibility: hidden; }
@@ -365,148 +388,66 @@ body.game-screen {
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 2px solid var(--clue-bg); padding-bottom: 6px;
 }
-.rules-header h2 { font-size: 1.15rem; }
+.rules-header h2 { font-size: 1.12rem; }
 .swipe-hint { font-size: 0.72rem; opacity: 0.75; font-weight: 600; }
 
-.rules-carousel {
-    position: relative;
-    overflow: hidden;
-    touch-action: pan-y;
-    cursor: grab;
-}
+.rules-carousel { position: relative; overflow: hidden; touch-action: pan-y; cursor: grab; }
 .rules-carousel:active { cursor: grabbing; }
 
-.rule-slide {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    animation: fadeSlide 0.22s ease;
-}
+.rule-slide { display: flex; flex-direction: column; gap: 8px; animation: fadeSlide 0.22s ease; }
 @keyframes fadeSlide {
     from { opacity: 0.3; transform: translateX(8px); }
     to { opacity: 1; transform: translateX(0); }
 }
 
 .rule-badge {
-    align-self: flex-start;
-    background: var(--accent); color: #fff;
-    font-size: 0.72rem; font-weight: 800;
-    padding: 3px 9px; border-radius: 12px;
+    align-self: flex-start; background: var(--accent); color: #fff;
+    font-size: 0.72rem; font-weight: 800; padding: 3px 9px; border-radius: 12px;
 }
 .rule-slide h3 { font-size: 1rem; color: var(--clue-text); }
 .rule-desc { font-size: 0.81rem; line-height: 1.38; }
 
 .example-box {
-    padding: 9px 10px;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    border-left: 4px solid transparent;
+    padding: 9px 10px; border-radius: 10px;
+    display: flex; flex-direction: column; gap: 6px; border-left: 4px solid transparent;
 }
-.example-box.ex-good {
-    background: rgba(46, 204, 113, 0.12);
-    border-left-color: #27ae60;
-}
-.example-box.ex-bad {
-    background: rgba(231, 76, 60, 0.12);
-    border-left-color: #c0392b;
-}
+.example-box.ex-good { background: rgba(46, 204, 113, 0.12); border-left-color: #27ae60; }
+.example-box.ex-bad { background: rgba(231, 76, 60, 0.12); border-left-color: #c0392b; }
 .ex-title { font-size: 0.76rem; font-weight: 800; }
 .ex-caption { font-size: 0.73rem; line-height: 1.3; opacity: 0.92; }
 
-/* MINI-TUILES 2.5D D'ILLUSTRATION DANS LES RÈGLES */
-.mini-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 4px 0;
-}
+.mini-row { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 0; }
 .mini-clue {
-    background: var(--clue-bg);
-    color: var(--clue-text);
-    font-weight: 800;
-    font-size: 0.78rem;
-    padding: 8px 9px;
-    border-radius: 6px;
-    white-space: nowrap;
+    background: var(--clue-bg); color: var(--clue-text);
+    font-weight: 800; font-size: 0.78rem; padding: 8px 9px; border-radius: 6px; white-space: nowrap;
 }
 .mini-tile {
-    width: 38px;
-    height: 38px;
-    background: var(--tile-top);
-    color: var(--tile-text);
-    border-radius: 6px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: 800;
-    font-size: 1.05rem;
-    box-shadow: 0 4px 0 var(--tile-side);
-    position: relative;
+    width: 38px; height: 38px; background: var(--tile-top); color: var(--tile-text);
+    border-radius: 6px; display: flex; justify-content: center; align-items: center;
+    font-weight: 800; font-size: 1.05rem; box-shadow: 0 4px 0 var(--tile-side); position: relative;
 }
 .mini-tile.mini-wall {
-    background: var(--wall-bg);
-    color: var(--wall-engraved);
+    background: var(--wall-bg); color: var(--wall-engraved);
     box-shadow: inset 0 3px 5px var(--wall-inner-shadow);
-    transform: translateY(2px);
-    font-style: italic;
-    font-size: 0.92rem;
+    transform: translateY(2px); font-style: italic; font-size: 0.92rem;
 }
-.mini-tile.mini-wall span {
-    border: 1px dashed rgba(255,255,255,0.22);
-    padding: 0 4px;
-    border-radius: 3px;
-}
-.mini-tile.mini-wall small {
-    position: absolute;
-    bottom: 1px;
-    right: 2px;
-    font-size: 0.45rem;
-    font-style: normal;
-}
-.mini-tile.mini-err {
-    background: #c0392b;
-    color: #fff;
-    box-shadow: 0 4px 0 #7f1d1d;
-}
+.mini-tile.mini-wall span { border: 1px dashed rgba(255,255,255,0.22); padding: 0 4px; border-radius: 3px; }
+.mini-tile.mini-wall small { position: absolute; bottom: 1px; right: 2px; font-size: 0.45rem; font-style: normal; }
+.mini-tile.mini-err { background: #c0392b; color: #fff; box-shadow: 0 4px 0 #7f1d1d; }
 
-/* BARRE DE NAVIGATION CARROUSEL (FLÈCHES + POINTS) */
-.carousel-nav {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    margin-top: 2px;
-}
+.carousel-nav { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 2px; }
 .carousel-arrow {
-    background: var(--clue-bg);
-    color: var(--clue-text);
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 0.95rem;
-    font-weight: 900;
-    cursor: pointer;
-    box-shadow: 0 2px 0 var(--tile-side);
+    background: var(--clue-bg); color: var(--clue-text); border: none;
+    width: 36px; height: 36px; border-radius: 50%; font-size: 0.95rem; font-weight: 900;
+    cursor: pointer; box-shadow: 0 2px 0 var(--tile-side);
 }
 .carousel-arrow:active { transform: translateY(2px); box-shadow: none; }
 .carousel-dots { display: flex; gap: 10px; align-items: center; }
 .carousel-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: none;
-    background: var(--tile-side);
-    cursor: pointer;
-    transition: transform 0.2s, background-color 0.2s;
+    width: 12px; height: 12px; border-radius: 50%; border: none;
+    background: var(--tile-side); cursor: pointer; transition: transform 0.2s, background-color 0.2s;
 }
-.carousel-dot.active {
-    background: var(--accent);
-    transform: scale(1.3);
-}
+.carousel-dot.active { background: var(--accent); transform: scale(1.3); }
 .rules-footer-actions { display: flex; flex-direction: column; gap: 6px; }
 
 .hub-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }

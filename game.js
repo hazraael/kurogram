@@ -1,4 +1,4 @@
-// KUROGRAM - Créé par Hazraael
+// KUROGRAM - Moteur principal (v1.3.0 i18n + Unlocks) - Créé par Hazraael
 const SYMBOLS = ['1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G'];
 const SAVE_KEY = 'kurogram_hazraael_v7';
 const MAX_LIVES = 4;
@@ -8,29 +8,29 @@ const PGM_BONUS_REWARDS = {
 };
 
 const MODES = [
-    { id: 0, name: "Mode 0 : Règles", reqWins: 0, desc: "Apprendre les 3 règles d'or pas à pas (2 étapes)" },
-    { id: 1, name: "Mode 1 : Apprentissage", reqWins: 0, desc: "Grilles 3x3 & 4x4 avec assistant (Sans chrono)" },
-    { id: 2, name: "Mode 2 : Débutant", reqWins: 0, desc: "Grilles 4x4, chrono, bonus actifs, murs gravés" },
-    { id: 3, name: "Mode 3 : Difficile", reqWins: 15, desc: "Grilles 5x5, 4 vies, erreurs pénalisées" },
-    { id: 4, name: "Mode 4 : Expert", reqWins: 30, desc: "Grilles 5x5 à 9x9, murs opaques, 2 pubs vie max", sizes: [5, 6, 7, 8, 9] },
-    { id: 5, name: "Mode 5 : Mode Dieu", reqWins: 50, desc: "Grilles 5x5 à 9x9, bonus 35% échec, vies dégressives", sizes: [5, 6, 7, 8, 9] },
-    { id: 6, name: "Mode 6 : 🤩 PGM", reqWins: 999, desc: "Grilles 10x10 à 16x16 Hexa (10 à 32 bonus par victoire !)", sizes: [10, 11, 12, 13, 14, 15, 16] }
+    { id: 0, nameKey: "mode0Name", descKey: "mode0Desc", reqWins: 0 },
+    { id: 1, nameKey: "mode1Name", descKey: "mode1Desc", reqWins: 0 },
+    { id: 2, nameKey: "mode2Name", descKey: "mode2Desc", reqWins: 0 },
+    { id: 3, nameKey: "mode3Name", descKey: "mode3Desc", reqWins: 15 },
+    { id: 4, nameKey: "mode4Name", descKey: "mode4Desc", reqWins: 30, sizes: [5, 6, 7, 8, 9] },
+    { id: 5, nameKey: "mode5Name", descKey: "mode5Desc", reqWins: 50, sizes: [5, 6, 7, 8, 9] },
+    { id: 6, nameKey: "mode6Name", descKey: "mode6Desc", reqWins: 999, sizes: [10, 11, 12, 13, 14, 15, 16] }
 ];
 
 const THEMES = [
-    { id: 'theme-paper', name: "Carnet & Crayon", cond: "Débloqué par défaut", icons: ['🔨','🪶','✏️'], names: ['Tampon','Plume','Crayon'] },
-    { id: 'theme-stone', name: "Plateau & Pierre", cond: "3 jours consécutifs ou 5 victoires sans bonus", icons: ['🔨','⛏️','🔍'], names: ['Marteau','Burin','Craie'] },
-    { id: 'theme-slate', name: "Nuit d'Ardoise & Or", cond: "10 victoires sans erreur ou 7 jours consécutifs", icons: ['⚡','⚜️','🔭'], names: ['Sceau','Plume d\'Or','Astrolabe'] }
+    { id: 'theme-paper', nameKey: "themePaperName", condKey: "themePaperCond", icons: ['🔨','🪶','✏️'], bKeys: ['themePaperB1','themePaperB2','themePaperB3'] },
+    { id: 'theme-stone', nameKey: "themeStoneName", condKey: "themeStoneCond", icons: ['🔨','⛏️','🔍'], bKeys: ['themeStoneB1','themeStoneB2','themeStoneB3'] },
+    { id: 'theme-slate', nameKey: "themeSlateName", condKey: "themeSlateCond", icons: ['⚡','⚜️','🔭'], bKeys: ['themeSlateB1','themeSlateB2','themeSlateB3'] }
 ];
 
-// --- NOTIFICATIONS IN-PAGE ---
+// --- NOTIFICATIONS IN-PAGE & DÉBLOCAGES ---
 function showToast(htmlMsg, type = 'info', duration = 4200) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
         <span>${htmlMsg}</span>
-        <button class="toast-close" title="Fermer">✕</button>
+        <button class="toast-close" title="✕">✕</button>
     `;
     toast.querySelector('.toast-close').addEventListener('click', () => toast.remove());
     container.appendChild(toast);
@@ -40,6 +40,118 @@ function showToast(htmlMsg, type = 'info', duration = 4200) {
         }, duration);
     }
 }
+
+function showUnlockNotification(detailHtml) {
+    const fullHtml = `<strong>${t('unlockTitle')}</strong><br>${detailHtml}`;
+    showToast(fullHtml, 'unlock', 6500);
+    const dot = document.getElementById('menu-unlock-dot');
+    if (dot) dot.classList.remove('hidden');
+}
+
+// Capture l'état actuel des déblocages pour détecter tout nouveau palier franchi
+function getUnlockStateMap() {
+    const totalWins = state.stats?.global?.gamesWon || 0;
+    return {
+        mode_3: state.allUnlockedTest || totalWins >= 15,
+        mode_4: state.allUnlockedTest || totalWins >= 30,
+        mode_5: state.allUnlockedTest || totalWins >= 50,
+        mode_6: state.allUnlockedTest || state.devUnlocked,
+        theme_stone: isThemeUnlocked('theme-stone'),
+        theme_slate: isThemeUnlocked('theme-slate'),
+        ach_pure: state.allUnlockedTest || state.noBonusWins >= 5,
+        ach_flawless: state.allUnlockedTest || state.flawlessStreak >= 10,
+        ach_regular: state.allUnlockedTest || state.streak >= 3,
+        ach_pgm: state.allUnlockedTest || state.devUnlocked
+    };
+}
+
+function checkAndNotifyNewUnlocks(beforeMap) {
+    const afterMap = getUnlockStateMap();
+
+    // Modes 3 à 6
+    [3, 4, 5, 6].forEach(mId => {
+        const key = `mode_${mId}`;
+        if (!beforeMap[key] && afterMap[key]) {
+            const mObj = MODES.find(m => m.id === mId);
+            showUnlockNotification(t('unlockModeMsg', { name: t(mObj.nameKey) }));
+        }
+    });
+
+    // Thèmes
+    if (!beforeMap.theme_stone && afterMap.theme_stone) {
+        showUnlockNotification(t('unlockThemeMsg', { name: t('themeStoneName') }));
+    }
+    if (!beforeMap.theme_slate && afterMap.theme_slate) {
+        showUnlockNotification(t('unlockThemeMsg', { name: t('themeSlateName') }));
+    }
+
+    // Hauts-Faits
+    if (!beforeMap.ach_pure && afterMap.ach_pure) {
+        showUnlockNotification(t('unlockAchMsg', { name: t('achPureName') }));
+    }
+    if (!beforeMap.ach_flawless && afterMap.ach_flawless) {
+        showUnlockNotification(t('unlockAchMsg', { name: t('achFlawlessName') }));
+    }
+    if (!beforeMap.ach_regular && afterMap.ach_regular) {
+        showUnlockNotification(t('unlockAchMsg', { name: t('achRegularName') }));
+    }
+    if (!beforeMap.ach_pgm && afterMap.ach_pgm) {
+        showUnlockNotification(t('unlockAchMsg', { name: t('achPgmName') }));
+    }
+}
+
+// --- APPLICATION DE LA LANGUE (FR / EN / ES) ---
+function applyLanguage(lang) {
+    if (!I18N[lang]) lang = 'fr';
+    currentLang = lang;
+    localStorage.setItem('kurogram_lang', lang);
+    document.documentElement.lang = lang;
+
+    const langSelect = document.getElementById('lang-selector');
+    if (langSelect) langSelect.value = lang;
+
+    // Traduire tous les éléments HTML statiques ayant data-i18n
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+    });
+
+    // Info-bulles et placeholders
+    document.getElementById('streak-badge').title = t('streakTitle');
+    document.getElementById('btn-help').title = t('helpTitle');
+    document.getElementById('btn-new-grid').title = t('newGridTitle');
+    document.getElementById('btn-daily').title = t('dailyTitle');
+    document.getElementById('btn-menu').title = t('menuTitle');
+    document.getElementById('secret-code-input').placeholder = t('secretPlaceholder');
+    document.getElementById('daily-check-desc').innerHTML = t('dailyCheckDesc');
+
+    // Injecter les 3 diapositives du carrousel des règles dans la langue active
+    const slides = document.querySelectorAll('#rules-carousel .rule-slide');
+    const slidesContent = RULES_SLIDES_HTML[lang] || RULES_SLIDES_HTML.fr;
+    slides.forEach((s, idx) => {
+        if (slidesContent[idx]) s.innerHTML = slidesContent[idx];
+    });
+
+    // Mettre à jour le filtre des tailles dans l'onglet Statistiques
+    const filterEl = document.getElementById('stats-size-filter');
+    if (filterEl) {
+        const prevVal = filterEl.value || 'global';
+        let opts = `<option value="global">${t('statsGlobalOpt')}</option>`;
+        for (let sz = 3; sz <= 16; sz++) {
+            opts += `<option value="${sz}">${t('statsGridOpt', { sz })}${sz >= 10 ? ' (PGM)' : ''}</option>`;
+        }
+        filterEl.innerHTML = opts;
+        filterEl.value = prevVal;
+    }
+
+    applyTheme(state.theme);
+    updateUIStatus();
+    updateGuideBanner();
+}
+
+document.getElementById('lang-selector').addEventListener('change', (e) => {
+    applyLanguage(e.target.value);
+});
 
 // --- CONFIRMATION IN-PAGE ---
 function showConfirmModal(title, message, onConfirm) {
@@ -59,20 +171,10 @@ function showConfirmModal(title, message, onConfirm) {
 
 function createEmptyStatBucket() {
     return {
-        gamesStarted: 0,
-        gamesWon: 0,
-        timedGamesWon: 0,
-        gamesAbandoned: 0,
-        gamesLost: 0,
-        livesUsed: 0,
-        flawlessWins: 0,
-        noBonusWinsTotal: 0,
-        withBonusWinsTotal: 0,
-        totalErrors: 0,
-        totalBonusesUsed: 0,
-        bestTime: null,
-        worstTime: null,
-        totalWinTime: 0
+        gamesStarted: 0, gamesWon: 0, timedGamesWon: 0, gamesAbandoned: 0,
+        gamesLost: 0, livesUsed: 0, flawlessWins: 0, noBonusWinsTotal: 0,
+        withBonusWinsTotal: 0, totalErrors: 0, totalBonusesUsed: 0,
+        bestTime: null, worstTime: null, totalWinTime: 0
     };
 }
 
@@ -88,41 +190,18 @@ function getStatBucketForSize(sz) {
 
 function getDefaultState() {
     return {
-        mode: 0,
-        tutorialStep: 0,
-        hasSeenIntroRules: false,
-        size: 3,
+        mode: 0, tutorialStep: 0, hasSeenIntroRules: false, size: 3,
         customSizes: { 4: 6, 5: 6, 6: 10 },
-        solutionNumbers: [],
-        solutionWalls: [],
-        rowClues: [],
-        colClues: [],
-        playerNumbers: [],
-        playerWalls: [],
-        playerNotes: [],
-        selected: { r: 0, c: 0 },
-        tool: 'num',
-        lives: MAX_LIVES,
-        revivesUsedThisGrid: 0,
-        usedVerifyThisGrid: false,
-        hasMadeMoveThisGrid: false,
-        bonuses: { b1: 3, b2: 2, b3: 3 },
-        usedBonusThisGrid: false,
-        errorsThisGrid: 0,
-        elapsedSeconds: 0,
-        noBonusWins: 0,
-        flawlessStreak: 0,
-        perfect9x9Count: 0,
-        devUnlocked: false,
-        allUnlockedTest: false,
-        debugVisible: false,
-        showEngraved: true,
-        theme: 'theme-paper',
-        streak: 1,
-        lastLogin: null,
-        isDaily: false,
-        stats: getDefaultStats(),
-        savedGridsByKey: {}
+        solutionNumbers: [], solutionWalls: [], rowClues: [], colClues: [],
+        playerNumbers: [], playerWalls: [], playerNotes: [],
+        selected: { r: 0, c: 0 }, tool: 'num', lives: MAX_LIVES,
+        revivesUsedThisGrid: 0, usedVerifyThisGrid: false, hasMadeMoveThisGrid: false,
+        bonuses: { b1: 3, b2: 2, b3: 3 }, usedBonusThisGrid: false,
+        errorsThisGrid: 0, elapsedSeconds: 0, noBonusWins: 0, flawlessStreak: 0,
+        perfect9x9Count: 0, devUnlocked: false, allUnlockedTest: false,
+        debugVisible: false, showEngraved: true, theme: 'theme-paper',
+        streak: 1, lastLogin: null, isDaily: false,
+        stats: getDefaultStats(), savedGridsByKey: {}
     };
 }
 
@@ -140,7 +219,7 @@ function hashSecret(str) {
     return '0x' + h.toString(16);
 }
 
-// --- CARROUSEL VISUEL DES 3 RÈGLES (SWIPE + FLÈCHES + POINTS + SOURIS) ---
+// --- CARROUSEL VISUEL DES 3 RÈGLES ---
 function openRulesModal(slideIndex = 0, showStartTutoBtn = false) {
     setRuleSlide(slideIndex);
     document.getElementById('btn-rules-start-tuto').classList.toggle('hidden', !showStartTutoBtn);
@@ -151,7 +230,6 @@ function setRuleSlide(idx) {
     const slides = document.querySelectorAll('.rule-slide');
     const dots = document.querySelectorAll('.carousel-dot');
     currentRuleSlide = (idx + slides.length) % slides.length;
-
     slides.forEach((s, i) => s.classList.toggle('hidden', i !== currentRuleSlide));
     dots.forEach((d, i) => d.classList.toggle('active', i === currentRuleSlide));
 }
@@ -159,7 +237,6 @@ function setRuleSlide(idx) {
 document.getElementById('btn-help').addEventListener('click', () => {
     openRulesModal(0, state.mode !== 0 || state.isDaily);
 });
-
 document.getElementById('rule-prev').addEventListener('click', () => setRuleSlide(currentRuleSlide - 1));
 document.getElementById('rule-next').addEventListener('click', () => setRuleSlide(currentRuleSlide + 1));
 
@@ -184,34 +261,21 @@ document.getElementById('btn-rules-start-tuto').addEventListener('click', () => 
     generatePuzzle(true);
 });
 
-// Support du glissement au doigt (Touch Swipe) et à la souris (Mouse Drag) sur le carrousel
 (function initCarouselSwipe() {
     const carousel = document.getElementById('rules-carousel');
     let startX = null;
-
-    carousel.addEventListener('touchstart', (e) => {
-        startX = e.changedTouches[0].screenX;
-    }, { passive: true });
-
+    carousel.addEventListener('touchstart', (e) => { startX = e.changedTouches[0].screenX; }, { passive: true });
     carousel.addEventListener('touchend', (e) => {
         if (startX === null) return;
         const diff = e.changedTouches[0].screenX - startX;
-        if (Math.abs(diff) > 40) {
-            setRuleSlide(diff < 0 ? currentRuleSlide + 1 : currentRuleSlide - 1);
-        }
+        if (Math.abs(diff) > 40) setRuleSlide(diff < 0 ? currentRuleSlide + 1 : currentRuleSlide - 1);
         startX = null;
     }, { passive: true });
-
-    carousel.addEventListener('mousedown', (e) => {
-        startX = e.clientX;
-    });
-
+    carousel.addEventListener('mousedown', (e) => { startX = e.clientX; });
     carousel.addEventListener('mouseup', (e) => {
         if (startX === null) return;
         const diff = e.clientX - startX;
-        if (Math.abs(diff) > 40) {
-            setRuleSlide(diff < 0 ? currentRuleSlide + 1 : currentRuleSlide - 1);
-        }
+        if (Math.abs(diff) > 40) setRuleSlide(diff < 0 ? currentRuleSlide + 1 : currentRuleSlide - 1);
         startX = null;
     });
 })();
@@ -219,31 +283,27 @@ document.getElementById('btn-rules-start-tuto').addEventListener('click', () => 
 // --- SYSTÈME DE PUBLICITÉ RÉCOMPENSÉE ---
 function requestRewardedAd({ title, description, onReward }) {
     const modal = document.getElementById('modal-ad');
-    const titleEl = document.getElementById('ad-modal-title');
-    const descEl = document.getElementById('ad-modal-desc');
+    document.getElementById('ad-modal-title').textContent = title;
+    document.getElementById('ad-modal-desc').innerHTML = description;
     const videoBox = document.getElementById('ad-video-box');
     const buttonsBox = document.getElementById('ad-modal-buttons');
     const countdownText = document.getElementById('ad-countdown-text');
-    const watchBtn = document.getElementById('btn-watch-ad');
-    const cancelBtn = document.getElementById('btn-cancel-ad');
 
-    titleEl.textContent = title;
-    descEl.innerHTML = description;
     videoBox.classList.add('hidden');
     buttonsBox.classList.remove('hidden');
     modal.classList.remove('hidden');
 
-    watchBtn.onclick = () => {
+    document.getElementById('btn-watch-ad').onclick = () => {
         buttonsBox.classList.add('hidden');
         videoBox.classList.remove('hidden');
         let remaining = 3;
-        countdownText.textContent = `Publicité vidéo en cours... ${remaining}s`;
+        countdownText.textContent = t('adCountdown', { s: remaining });
 
         if (adCountdownInterval) clearInterval(adCountdownInterval);
         adCountdownInterval = setInterval(() => {
             remaining--;
             if (remaining > 0) {
-                countdownText.textContent = `Publicité vidéo en cours... ${remaining}s`;
+                countdownText.textContent = t('adCountdown', { s: remaining });
             } else {
                 clearInterval(adCountdownInterval);
                 modal.classList.add('hidden');
@@ -252,26 +312,22 @@ function requestRewardedAd({ title, description, onReward }) {
         }, 1000);
     };
 
-    cancelBtn.onclick = () => {
+    document.getElementById('btn-cancel-ad').onclick = () => {
         if (adCountdownInterval) clearInterval(adCountdownInterval);
         modal.classList.add('hidden');
     };
 }
 
 // --- CHRONOMÈTRE ---
-function isTimedMode() {
-    return state.isDaily || state.mode >= 2;
-}
+function isTimedMode() { return state.isDaily || state.mode >= 2; }
 
 function startTimer() {
     if (timerInterval) clearInterval(timerInterval);
     const timerEl = document.getElementById('timer-label');
-
     if (!isTimedMode()) {
         timerEl.classList.add('hidden');
         return;
     }
-
     timerEl.classList.remove('hidden');
     updateTimerDisplay();
     timerInterval = setInterval(() => {
@@ -312,32 +368,20 @@ function getTargetSizeForCurrentMode() {
 }
 
 function getGridKey() {
-    if (state.isDaily) {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        return `daily_${todayStr}`;
-    }
-    if (state.mode === 0) {
-        return `mode_0_step_${state.tutorialStep}`;
-    }
-    const sz = getTargetSizeForCurrentMode();
-    return `mode_${state.mode}_size_${sz}`;
+    if (state.isDaily) return `daily_${new Date().toISOString().slice(0, 10)}`;
+    if (state.mode === 0) return `mode_0_step_${state.tutorialStep}`;
+    return `mode_${state.mode}_size_${getTargetSizeForCurrentMode()}`;
 }
 
 function saveCurrentGridSnapshot() {
     if (!state.solutionNumbers || state.solutionNumbers.length === 0) return;
-    const key = getGridKey();
-    state.savedGridsByKey[key] = {
-        size: state.size,
-        tutorialStep: state.tutorialStep,
-        solutionNumbers: state.solutionNumbers,
-        solutionWalls: state.solutionWalls,
-        rowClues: state.rowClues,
-        colClues: state.colClues,
-        playerNumbers: state.playerNumbers,
-        playerWalls: state.playerWalls,
+    state.savedGridsByKey[getGridKey()] = {
+        size: state.size, tutorialStep: state.tutorialStep,
+        solutionNumbers: state.solutionNumbers, solutionWalls: state.solutionWalls,
+        rowClues: state.rowClues, colClues: state.colClues,
+        playerNumbers: state.playerNumbers, playerWalls: state.playerWalls,
         playerNotes: state.playerNotes.map(row => row.map(set => Array.from(set))),
-        elapsedSeconds: state.elapsedSeconds,
-        lives: state.lives,
+        elapsedSeconds: state.elapsedSeconds, lives: state.lives,
         revivesUsedThisGrid: state.revivesUsedThisGrid,
         usedVerifyThisGrid: state.usedVerifyThisGrid,
         hasMadeMoveThisGrid: state.hasMadeMoveThisGrid,
@@ -345,8 +389,6 @@ function saveCurrentGridSnapshot() {
         errorsThisGrid: state.errorsThisGrid
     };
     saveProgress();
-    const ind = document.getElementById('save-indicator');
-    if (ind) ind.textContent = "💾 Sauvegardé";
 }
 
 function restoreGridSnapshotIfAvailable(key) {
@@ -388,29 +430,19 @@ function loadProgress() {
         }
     }
     updateDailyStreak();
-    applyTheme(state.theme);
+    applyLanguage(currentLang);
 }
 
 function saveProgress() {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-        mode: state.mode,
-        tutorialStep: state.tutorialStep,
-        hasSeenIntroRules: state.hasSeenIntroRules,
-        customSizes: state.customSizes,
-        bonuses: state.bonuses,
-        noBonusWins: state.noBonusWins,
-        flawlessStreak: state.flawlessStreak,
-        perfect9x9Count: state.perfect9x9Count,
-        devUnlocked: state.devUnlocked,
-        allUnlockedTest: state.allUnlockedTest,
-        debugVisible: state.debugVisible,
-        showEngraved: state.showEngraved,
-        theme: state.theme,
-        streak: state.streak,
-        lastLogin: state.lastLogin,
-        isDaily: state.isDaily,
-        stats: state.stats,
-        savedGridsByKey: state.savedGridsByKey
+        mode: state.mode, tutorialStep: state.tutorialStep,
+        hasSeenIntroRules: state.hasSeenIntroRules, customSizes: state.customSizes,
+        bonuses: state.bonuses, noBonusWins: state.noBonusWins,
+        flawlessStreak: state.flawlessStreak, perfect9x9Count: state.perfect9x9Count,
+        devUnlocked: state.devUnlocked, allUnlockedTest: state.allUnlockedTest,
+        debugVisible: state.debugVisible, showEngraved: state.showEngraved,
+        theme: state.theme, streak: state.streak, lastLogin: state.lastLogin,
+        isDaily: state.isDaily, stats: state.stats, savedGridsByKey: state.savedGridsByKey
     }));
 }
 
@@ -424,14 +456,16 @@ window.addEventListener('storage', (e) => {
 function updateDailyStreak() {
     const today = new Date().toISOString().slice(0, 10);
     if (state.lastLogin !== today) {
+        const beforeUnlocks = getUnlockStateMap();
         if (state.lastLogin) {
             const diff = (new Date(today) - new Date(state.lastLogin)) / (1000 * 3600 * 24);
             state.streak = (diff === 1) ? state.streak + 1 : 1;
         }
         state.lastLogin = today;
         saveProgress();
+        checkAndNotifyNewUnlocks(beforeUnlocks);
     }
-    document.getElementById('streak-badge').textContent = `🔥 ${state.streak}j`;
+    document.getElementById('streak-badge').textContent = `🔥 ${state.streak}d`;
 }
 
 let currentSeed = Date.now();
@@ -444,7 +478,6 @@ function seededRandom() {
 function generatePuzzle(forceNew = false) {
     const key = getGridKey();
     if (!forceNew && restoreGridSnapshotIfAvailable(key)) {
-        // Si c'est le tout premier démarrage en Mode 0, afficher automatiquement les 3 règles visuelles
         if (!state.isDaily && state.mode === 0 && !state.hasSeenIntroRules) {
             openRulesModal(0, false);
         }
@@ -464,9 +497,7 @@ function generatePuzzle(forceNew = false) {
         recordGameStarted(3);
         saveCurrentGridSnapshot();
         startTimer();
-        if (!state.hasSeenIntroRules) {
-            openRulesModal(0, false);
-        }
+        if (!state.hasSeenIntroRules) openRulesModal(0, false);
         return;
     }
 
@@ -548,9 +579,7 @@ function setupRuleTutorialStep(step) {
         computeAllTargetClues();
         initEmptyPlayerGrid(3, 3);
         for (let r = 1; r < 3; r++) {
-            for (let c = 0; c < 3; c++) {
-                state.playerNumbers[r][c] = state.solutionNumbers[r][c];
-            }
+            for (let c = 0; c < 3; c++) state.playerNumbers[r][c] = state.solutionNumbers[r][c];
         }
     } else {
         state.solutionNumbers = [[1, 3, 2], [3, 2, 1], [2, 1, 3]];
@@ -568,17 +597,12 @@ function initEmptyPlayerGrid(rows, cols) {
     state.selected = { r: 0, c: 0 };
 }
 
-// --- CALCUL DES INDICES & VALIDATION ---
 function computeLineClues(numbers, walls) {
     let clues = [];
     let currentSum = 0;
     for (let i = 0; i < numbers.length; i++) {
-        if (!walls[i]) {
-            currentSum += numbers[i];
-        } else if (currentSum > 0) {
-            clues.push(currentSum);
-            currentSum = 0;
-        }
+        if (!walls[i]) currentSum += numbers[i];
+        else if (currentSum > 0) { clues.push(currentSum); currentSum = 0; }
     }
     if (currentSum > 0) clues.push(currentSum);
     return clues.length > 0 ? clues : [0];
@@ -601,14 +625,11 @@ function isLineFullyAndCorrectlySolved(isRow, index) {
         const val = state.playerNumbers[r][c];
 
         if (!isW) {
-            if (val < 1 || val > N) return false;
+            if (val < 1 || val > N || seenWhiteNumbers.has(val)) return false;
+            seenWhiteNumbers.add(val);
+        } else if (val >= 1 && val <= N) {
             if (seenWhiteNumbers.has(val)) return false;
             seenWhiteNumbers.add(val);
-        } else {
-            if (val >= 1 && val <= N) {
-                if (seenWhiteNumbers.has(val)) return false;
-                seenWhiteNumbers.add(val);
-            }
         }
         walls.push(isW);
         nums.push(val);
@@ -682,7 +703,6 @@ function renderAll() {
                     const lockBadge = document.createElement('span');
                     lockBadge.className = 'wall-lock-badge';
                     lockBadge.textContent = '🔒';
-                    lockBadge.title = "Chiffre masqué sous le mur : compte pour le Sudoku (unicité), mais vaut 0 dans la somme !";
                     tile.appendChild(lockBadge);
                 }
             } else if (!isWall && state.playerNotes[r][c].size > 0) {
@@ -719,7 +739,6 @@ function renderNumpad() {
         btn.className = 'num-btn';
         if (i >= 10) {
             btn.innerHTML = `<span>${SYMBOLS[i - 1]}</span><span class="num-sub">${i}</span>`;
-            btn.title = `${SYMBOLS[i - 1]} = ${i}`;
         } else {
             btn.textContent = SYMBOLS[i - 1];
         }
@@ -730,7 +749,6 @@ function renderNumpad() {
     const eraseBtn = document.createElement('button');
     eraseBtn.className = 'num-btn';
     eraseBtn.textContent = '⌫';
-    eraseBtn.title = "Effacer la case sélectionnée (Suppr)";
     eraseBtn.addEventListener('click', () => handleErase());
     numpad.appendChild(eraseBtn);
 }
@@ -738,11 +756,11 @@ function renderNumpad() {
 function updateUIStatus() {
     const modeObj = MODES.find(m => m.id === state.mode) || MODES[0];
     if (state.isDaily) {
-        document.getElementById('mode-label').textContent = "📅 Défi du Jour (5x5)";
+        document.getElementById('mode-label').textContent = t('dailyHeader');
     } else if (state.mode === 0) {
-        document.getElementById('mode-label').textContent = `Mode 0 : Règles (Étape ${state.tutorialStep + 1}/2)`;
+        document.getElementById('mode-label').textContent = t('rulesStepHeader', { step: state.tutorialStep + 1 });
     } else {
-        document.getElementById('mode-label').textContent = `${modeObj.name} (${state.size}x${state.size})`;
+        document.getElementById('mode-label').textContent = `${t(modeObj.nameKey)} (${state.size}x${state.size})`;
     }
     document.getElementById('btn-daily').classList.toggle('active-daily', state.isDaily);
 
@@ -776,13 +794,11 @@ function updateUIStatus() {
 
 document.getElementById('size-selector').addEventListener('change', (e) => {
     saveCurrentGridSnapshot();
-    const newSize = parseInt(e.target.value, 10);
-    state.customSizes[state.mode] = newSize;
+    state.customSizes[state.mode] = parseInt(e.target.value, 10);
     saveProgress();
     generatePuzzle(false);
 });
 
-// Guide pas-à-pas clarifié sur le double rôle du Mur (0 dans la somme, mais compte pour le Sudoku)
 function updateGuideBanner() {
     const banner = document.getElementById('guide-banner');
     const text = document.getElementById('guide-text');
@@ -793,16 +809,11 @@ function updateGuideBanner() {
     banner.classList.remove('hidden');
 
     if (state.mode === 0 && state.tutorialStep === 0) {
-        if (state.playerWalls[0][1]) {
-            text.innerHTML = "<strong>Étape 1/2 :</strong> Super ! Le <b>Mur ⬛</b> au milieu cache le chiffre <b><i>2</i> 🔒</b> : ce <b>2</b> ne compte <u>pas</u> dans la somme <b>1 - 3</b>, mais il est déjà pris pour le Sudoku ! Il ne te reste plus qu'à poser <b>1</b> à gauche et <b>3</b> à droite.";
-        } else {
-            text.innerHTML = "<strong>Étape 1/2 :</strong> Regarde la 1re ligne : l'indice est <b>1 - 3</b> (deux blocs séparés par un Mur). Touche la 1re case et pose <b>1</b>. Touche la case du milieu et clique sur <b>⬛ Mur</b>. Touche la 3e case et pose <b>3</b> ! <i>(Besoin d'exemples ? Clique sur <b>?</b> en haut)</i>.";
-        }
+        text.innerHTML = state.playerWalls[0][1] ? t('tutoStep1WallPlaced') : t('tutoStep1Start');
         return;
     }
-
     if (state.mode === 0 && state.tutorialStep === 1) {
-        text.innerHTML = "<strong>Étape 2/2 (Grille 3x3) :</strong> Chaque ligne/colonne doit contenir <b>1, 2 et 3</b>. Rappel : le chiffre <b>🔒</b> caché sous un <b>Mur ⬛</b> ne s'additionne <u>pas</u> dans les sommes des bords, mais il compte pour le Sudoku (unicité) !";
+        text.innerHTML = t('tutoStep2');
         return;
     }
 
@@ -812,15 +823,15 @@ function updateGuideBanner() {
         if (isLineFullyAndCorrectlySolved(true, r)) continue;
         const clues = state.rowClues[r];
         if (clues.length === 1 && clues[0] === maxSum) {
-            text.innerHTML = `💡 <b>Astuce :</b> La ligne ${r + 1} a une somme de <b>${maxSum}</b> (1+2+...=${maxSum}) : elle ne contient donc <b>aucun mur</b> !`;
+            text.innerHTML = t('hintNoWall', { r: r + 1, sum: maxSum });
             return;
         }
         if (clues.length > 1) {
-            text.innerHTML = `💡 <b>Astuce :</b> Ligne ${r + 1} (<b>${clues.join(' - ')}</b>) : place un <b>⬛ Mur</b> entre ces sommes. Le chiffre caché sous le mur ne compte pas dans la somme, mais compte pour le Sudoku !`;
+            text.innerHTML = t('hintSplitSum', { r: r + 1, clues: clues.join(' - ') });
             return;
         }
     }
-    text.innerHTML = `💡 <b>Astuce :</b> Chaque chiffre de 1 à ${N} est unique par ligne et par colonne, même s'il est caché sous un Mur ⬛ !`;
+    text.innerHTML = t('hintDefault', { n: N });
 }
 
 // --- ACTIONS JOUEUR ---
@@ -831,17 +842,14 @@ function applyWallOnSelectedTile() {
     const wasColSolved = isLineFullyAndCorrectlySolved(false, c);
 
     if (!state.playerWalls[r][c] && !state.isDaily && state.mode >= 3 && state.mode <= 5 && !state.solutionWalls[r][c]) {
-        penalizeError("Ce n'est pas un mur !");
+        penalizeError(t('errNotWall'));
         return;
     }
 
     state.playerWalls[r][c] = !state.playerWalls[r][c];
     if (state.playerWalls[r][c]) {
-        if (state.showEngraved && (state.isDaily || state.mode <= 3)) {
-            state.playerNumbers[r][c] = state.solutionNumbers[r][c];
-        } else {
-            state.playerNumbers[r][c] = 0;
-        }
+        state.playerNumbers[r][c] = (state.showEngraved && (state.isDaily || state.mode <= 3))
+            ? state.solutionNumbers[r][c] : 0;
     } else {
         state.playerNumbers[r][c] = 0;
     }
@@ -870,13 +878,13 @@ function handleNumberInput(num) {
 
     if (!state.isDaily && state.mode >= 3 && state.mode <= 5) {
         if (state.solutionWalls[r][c]) {
-            penalizeError("Cette case est un mur !");
+            penalizeError(t('errIsWall'));
             return;
         }
         for (let k = 0; k < state.size; k++) {
             if ((k !== c && !state.playerWalls[r][k] && state.playerNumbers[r][k] === num) ||
                 (k !== r && !state.playerWalls[k][c] && state.playerNumbers[k][c] === num)) {
-                penalizeError("Chiffre déjà présent sur la ligne ou colonne !");
+                penalizeError(t('errDuplicate'));
                 return;
             }
         }
@@ -909,8 +917,7 @@ document.getElementById('btn-verify').addEventListener('click', () => {
 
     for (let r = 0; r < N; r++) {
         for (let c = 0; c < N; c++) {
-            const isCompleteCell = state.playerWalls[r][c] || state.playerNumbers[r][c] > 0;
-            if (!isCompleteCell) remainingCells++;
+            if (!state.playerWalls[r][c] && state.playerNumbers[r][c] <= 0) remainingCells++;
 
             if (state.playerWalls[r][c] && !state.solutionWalls[r][c]) {
                 errorCoords.push({ r, c });
@@ -920,12 +927,8 @@ document.getElementById('btn-verify').addEventListener('click', () => {
                 } else {
                     const val = state.playerNumbers[r][c];
                     for (let k = 0; k < N; k++) {
-                        if (k !== c && state.playerNumbers[r][k] === val && (!state.playerWalls[r][k] || state.showEngraved)) {
-                            errorCoords.push({ r, c });
-                        }
-                        if (k !== r && state.playerNumbers[k][c] === val && (!state.playerWalls[k][c] || state.showEngraved)) {
-                            errorCoords.push({ r, c });
-                        }
+                        if (k !== c && state.playerNumbers[r][k] === val && (!state.playerWalls[r][k] || state.showEngraved)) errorCoords.push({ r, c });
+                        if (k !== r && state.playerNumbers[k][c] === val && (!state.playerWalls[k][c] || state.showEngraved)) errorCoords.push({ r, c });
                     }
                 }
             }
@@ -935,17 +938,13 @@ document.getElementById('btn-verify').addEventListener('click', () => {
     if (errorCoords.length > 0) {
         errorCoords.forEach(({ r, c }) => {
             const tile = document.querySelector(`.tile[data-r="${r}"][data-c="${c}"]`);
-            if (tile) {
-                tile.classList.remove('error-highlight');
-                void tile.offsetWidth;
-                tile.classList.add('error-highlight');
-            }
+            if (tile) { tile.classList.remove('error-highlight'); void tile.offsetWidth; tile.classList.add('error-highlight'); }
         });
-        showToast(`⚠️ ${errorCoords.length} case(s) comporte(nt) une erreur (en rouge).`, 'error');
+        showToast(t('verifyErrors', { count: errorCoords.length }), 'error');
     } else if (remainingCells > 0) {
-        showToast(`✔️ Aucune erreur dans tes saisies actuelles ! (Il reste <b>${remainingCells} case(s)</b> à compléter).`, 'success');
+        showToast(t('verifyOkRemaining', { rem: remainingCells }), 'success');
     } else {
-        showToast(`✔️ Aucune contradiction détectée ! Vérifie que les sommes des blocs correspondent aux indices.`, 'info');
+        showToast(t('verifyAllFilled'), 'info');
     }
 });
 
@@ -970,9 +969,9 @@ function penalizeError(msg) {
         state.stats.global.gamesLost++;
         b.gamesLost++;
         saveProgress();
-        showEndModal(false, msg + " Tu n'as plus de vies.");
+        showEndModal(false, `${msg} ${t('errNoLives')}`);
     } else {
-        showToast(`💔 ${msg} (${state.lives} vie(s) restante(s))`, 'error', 2800);
+        showToast(t('livesLeftToast', { msg, lives: state.lives }), 'error', 2800);
     }
 }
 
@@ -992,9 +991,7 @@ function checkLineWaveAndVictory(r, c, wasRowSolved, wasColSolved) {
         delete state.savedGridsByKey[getGridKey()];
         state.tutorialStep = 1;
         saveProgress();
-        setTimeout(() => {
-            showEndModal(true, "Étape 1/2 réussie ! Passons maintenant à l'Étape 2/2 sur une grille 3x3 complète.", true);
-        }, 450);
+        setTimeout(() => showEndModal(true, t('step1DoneMsg'), true), 450);
         return;
     }
 
@@ -1002,13 +999,11 @@ function checkLineWaveAndVictory(r, c, wasRowSolved, wasColSolved) {
 }
 
 function triggerWave(isRow, index) {
-    const tiles = document.querySelectorAll('.tile');
-    tiles.forEach(t => {
-        const tr = parseInt(t.dataset.r);
-        const tc = parseInt(t.dataset.c);
+    document.querySelectorAll('.tile').forEach(tile => {
+        const tr = parseInt(tile.dataset.r);
+        const tc = parseInt(tile.dataset.c);
         if ((isRow && tr === index) || (!isRow && tc === index)) {
-            const delay = (isRow ? tc : tr) * 40;
-            setTimeout(() => t.classList.add('wave-anim'), delay);
+            setTimeout(() => tile.classList.add('wave-anim'), (isRow ? tc : tr) * 40);
         }
     });
 }
@@ -1016,8 +1011,8 @@ function triggerWave(isRow, index) {
 // --- LES 3 BONUS ---
 function promptAdForEmptyBonus(bonusKey, bonusLabel) {
     requestRewardedAd({
-        title: `Oh non ! Plus de ${bonusLabel} !`,
-        description: `Vous n'avez plus de <b>${bonusLabel}</b>.<br><br>Regardez une courte publicité pour obtenir <b>3 bonus aléatoires</b> (dont au moins <b>1 ${bonusLabel} garanti</b>) !`,
+        title: t('emptyBonusTitle', { name: bonusLabel }),
+        description: t('emptyBonusDesc', { name: bonusLabel }),
         onReward: () => {
             const keys = ['b1', 'b2', 'b3'];
             const gained = { b1: 0, b2: 0, b3: 0 };
@@ -1030,8 +1025,12 @@ function promptAdForEmptyBonus(bonusKey, bonusLabel) {
             }
             saveProgress();
             updateUIStatus();
-            const tObj = THEMES.find(t => t.id === state.theme) || THEMES[0];
-            showToast(`🎁 Récompense : +${gained.b1} ${tObj.names[0]}, +${gained.b2} ${tObj.names[1]}, +${gained.b3} ${tObj.names[2]} !`, 'success');
+            const tObj = THEMES.find(th => th.id === state.theme) || THEMES[0];
+            showToast(t('bonusRewardToast', {
+                b1: gained.b1, n1: t(tObj.bKeys[0]),
+                b2: gained.b2, n2: t(tObj.bKeys[1]),
+                b3: gained.b3, n3: t(tObj.bKeys[2])
+            }), 'success');
         }
     });
 }
@@ -1044,7 +1043,7 @@ function recordBonusUsed() {
 
 function checkGodModeFizzle() {
     if (!state.isDaily && state.mode === 5 && Math.random() < 0.35) {
-        showToast("⚡ Mode Dieu : Ton bonus s'est brisé sous la pression divine !", 'warn');
+        showToast(t('godModeFizzle'), 'warn');
         updateUIStatus();
         return true;
     }
@@ -1052,23 +1051,16 @@ function checkGodModeFizzle() {
 }
 
 document.getElementById('bonus-hammer').addEventListener('click', () => {
-    const tObj = THEMES.find(t => t.id === state.theme) || THEMES[0];
-    if (state.bonuses.b1 <= 0) {
-        promptAdForEmptyBonus('b1', tObj.names[0]);
-        return;
-    }
+    const tObj = THEMES.find(th => th.id === state.theme) || THEMES[0];
+    if (state.bonuses.b1 <= 0) { promptAdForEmptyBonus('b1', t(tObj.bKeys[0])); return; }
+
     const unrevealedWalls = [];
     for (let r = 0; r < state.size; r++) {
         for (let c = 0; c < state.size; c++) {
-            if (state.solutionWalls[r][c] && !state.playerWalls[r][c]) {
-                unrevealedWalls.push({ r, c });
-            }
+            if (state.solutionWalls[r][c] && !state.playerWalls[r][c]) unrevealedWalls.push({ r, c });
         }
     }
-    if (unrevealedWalls.length === 0) {
-        showToast("Tous les murs sont déjà découverts !", 'info');
-        return;
-    }
+    if (unrevealedWalls.length === 0) { showToast(t('allWallsFound'), 'info'); return; }
 
     state.bonuses.b1--;
     recordBonusUsed();
@@ -1076,16 +1068,11 @@ document.getElementById('bonus-hammer').addEventListener('click', () => {
 
     const pick = unrevealedWalls[Math.floor(Math.random() * unrevealedWalls.length)];
     const wrapper = document.getElementById('board-wrapper');
-    wrapper.classList.remove('shake');
-    void wrapper.offsetWidth;
-    wrapper.classList.add('shake');
+    wrapper.classList.remove('shake'); void wrapper.offsetWidth; wrapper.classList.add('shake');
 
     state.playerWalls[pick.r][pick.c] = true;
-    if (state.showEngraved && (state.isDaily || state.mode <= 3)) {
-        state.playerNumbers[pick.r][pick.c] = state.solutionNumbers[pick.r][pick.c];
-    } else {
-        state.playerNumbers[pick.r][pick.c] = 0;
-    }
+    state.playerNumbers[pick.r][pick.c] = (state.showEngraved && (state.isDaily || state.mode <= 3))
+        ? state.solutionNumbers[pick.r][pick.c] : 0;
     saveCurrentGridSnapshot();
     renderAll();
     highlightTiles([pick]);
@@ -1093,14 +1080,10 @@ document.getElementById('bonus-hammer').addEventListener('click', () => {
 });
 
 document.getElementById('bonus-quill').addEventListener('click', () => {
-    const tObj = THEMES.find(t => t.id === state.theme) || THEMES[0];
-    if (state.bonuses.b2 <= 0) {
-        promptAdForEmptyBonus('b2', tObj.names[1]);
-        return;
-    }
-    let bestCell = null;
-    let bestScore = -1;
+    const tObj = THEMES.find(th => th.id === state.theme) || THEMES[0];
+    if (state.bonuses.b2 <= 0) { promptAdForEmptyBonus('b2', t(tObj.bKeys[1])); return; }
 
+    let bestCell = null, bestScore = -1;
     for (let r = 0; r < state.size; r++) {
         for (let c = 0; c < state.size; c++) {
             const isSolved = (state.playerWalls[r][c] === state.solutionWalls[r][c]) &&
@@ -1112,10 +1095,7 @@ document.getElementById('bonus-quill').addEventListener('click', () => {
                     if (state.playerNumbers[k][c] > 0 || state.playerWalls[k][c]) progress += 2;
                 }
                 const score = progress + state.solutionNumbers[r][c];
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestCell = { r, c };
-                }
+                if (score > bestScore) { bestScore = score; bestCell = { r, c }; }
             }
         }
     }
@@ -1136,11 +1116,9 @@ document.getElementById('bonus-quill').addEventListener('click', () => {
 });
 
 document.getElementById('bonus-pencil').addEventListener('click', () => {
-    const tObj = THEMES.find(t => t.id === state.theme) || THEMES[0];
-    if (state.bonuses.b3 <= 0) {
-        promptAdForEmptyBonus('b3', tObj.names[2]);
-        return;
-    }
+    const tObj = THEMES.find(th => th.id === state.theme) || THEMES[0];
+    if (state.bonuses.b3 <= 0) { promptAdForEmptyBonus('b3', t(tObj.bKeys[2])); return; }
+
     const candidatesPool = [];
     for (let r = 0; r < state.size; r++) {
         for (let c = 0; c < state.size; c++) {
@@ -1170,9 +1148,7 @@ document.getElementById('bonus-pencil').addEventListener('click', () => {
                 if (!state.playerWalls[r][k] && state.playerNumbers[r][k] === n) used = true;
                 if (!state.playerWalls[k][c] && state.playerNumbers[k][c] === n) used = true;
             }
-            if (!used && n !== trueVal && Math.random() < 0.5) {
-                state.playerNotes[r][c].add(n);
-            }
+            if (!used && n !== trueVal && Math.random() < 0.5) state.playerNotes[r][c].add(n);
         }
     });
 
@@ -1188,7 +1164,7 @@ function highlightTiles(coordsList) {
     });
 }
 
-// --- VICTOIRE & STATISTIQUES ---
+// --- VICTOIRE, DÉBLOCAGES & STATISTIQUES ---
 function applyVictoryStatsToBucket(bucket, timed, elapsed) {
     bucket.gamesWon++;
     if (timed) {
@@ -1197,23 +1173,21 @@ function applyVictoryStatsToBucket(bucket, timed, elapsed) {
         if (bucket.bestTime === null || elapsed < bucket.bestTime) bucket.bestTime = elapsed;
         if (bucket.worstTime === null || elapsed > bucket.worstTime) bucket.worstTime = elapsed;
     }
-    if (!state.usedBonusThisGrid) {
-        bucket.noBonusWinsTotal++;
-    } else {
-        bucket.withBonusWinsTotal = (bucket.withBonusWinsTotal || 0) + 1;
-    }
-    if (state.errorsThisGrid === 0) {
-        bucket.flawlessWins++;
-    }
+    if (!state.usedBonusThisGrid) bucket.noBonusWinsTotal++;
+    else bucket.withBonusWinsTotal = (bucket.withBonusWinsTotal || 0) + 1;
+    if (state.errorsThisGrid === 0) bucket.flawlessWins++;
 }
 
 function onGridVictory() {
     delete state.savedGridsByKey[getGridKey()];
 
+    // Photo des déblocages AVANT d'incrémenter les compteurs de victoire
+    const beforeUnlocks = getUnlockStateMap();
+
     const timed = isTimedMode();
-    const t = state.elapsedSeconds;
-    applyVictoryStatsToBucket(state.stats.global, timed, t);
-    applyVictoryStatsToBucket(getStatBucketForSize(state.size), timed, t);
+    const el = state.elapsedSeconds;
+    applyVictoryStatsToBucket(state.stats.global, timed, el);
+    applyVictoryStatsToBucket(getStatBucketForSize(state.size), timed, el);
 
     if (!state.usedBonusThisGrid) state.noBonusWins++;
     if (state.errorsThisGrid === 0) state.flawlessStreak++;
@@ -1230,37 +1204,41 @@ function onGridVictory() {
             const count = PGM_BONUS_REWARDS[state.size] || 10;
             const keys = ['b1', 'b2', 'b3'];
             for (let i = 0; i < count; i++) {
-                const rk = keys[Math.floor(Math.random() * keys.length)];
-                state.bonuses[rk]++;
+                state.bonuses[keys[Math.floor(Math.random() * keys.length)]]++;
             }
-            pgmRewardText = ` — 🤩 Jackpot PGM : +${count} bonus aléatoires gagnés !`;
+            pgmRewardText = t('pgmReward', { count });
         } else {
-            pgmRewardText = ` — (Bouton Vérifier utilisé : pas de jackpot de bonus PGM)`;
+            pgmRewardText = t('pgmNoReward');
         }
     }
 
-    const wasTutorial = (!state.isDaily && state.mode === 0);
-    if (wasTutorial) {
+    if (!state.isDaily && state.mode === 0) {
         state.mode = 1;
         state.tutorialStep = 0;
     }
     saveProgress();
     updateUIStatus();
 
+    // Déclencher les notifications dorées si un Mode, Thème ou Haut-Fait vient d'être débloqué !
+    checkAndNotifyNewUnlocks(beforeUnlocks);
+
     const msg = timed
-        ? `Temps : ${formatTime(state.elapsedSeconds)} — ${state.usedBonusThisGrid ? 'Avec bonus' : 'Sans bonus 🌟'}${pgmRewardText}`
-        : `Parfait ! Grille d'apprentissage maîtrisée 🌟`;
+        ? t('winTimedMsg', {
+            time: formatTime(state.elapsedSeconds),
+            bonus: state.usedBonusThisGrid ? t('withBonus') : t('withoutBonus'),
+            pgm: pgmRewardText
+          })
+        : t('winUntimedMsg');
     showEndModal(true, msg, false);
 }
 
 function showEndModal(isWin, msg, isTutorialStepTransition = false) {
     document.getElementById('end-title').textContent = isWin
-        ? (isTutorialStepTransition ? "👏 Étape 1/2 Terminée !" : "🎉 Grille Résolue !")
-        : "💔 Partie Terminée";
+        ? (isTutorialStepTransition ? t('step1DoneTitle') : t('winTitle'))
+        : t('loseTitle');
     document.getElementById('end-message').textContent = msg;
     document.getElementById('btn-next-level').textContent = isTutorialStepTransition
-        ? "Passer à l'Étape 2/2 ▶"
-        : (isWin ? "Nouvelle Grille ▶" : "Nouvelle Grille 🔄");
+        ? t('nextStepBtn') : t('nextGridBtn');
 
     const adInfoBox = document.getElementById('end-ad-info');
     const reviveBtn = document.getElementById('btn-extra-life');
@@ -1268,37 +1246,27 @@ function showEndModal(isWin, msg, isTutorialStepTransition = false) {
     if (isWin) {
         adInfoBox.classList.add('hidden');
         reviveBtn.classList.add('hidden');
+    } else if (state.mode === 3) {
+        adInfoBox.classList.remove('hidden');
+        adInfoBox.innerHTML = t('adRuleHard');
+        reviveBtn.textContent = t('adBtnHard');
+        reviveBtn.classList.remove('hidden');
+    } else if (state.mode === 4) {
+        const rem = Math.max(0, 2 - state.revivesUsedThisGrid);
+        adInfoBox.classList.remove('hidden');
+        adInfoBox.innerHTML = t('adRuleExpert', { rem });
+        reviveBtn.textContent = t('adBtnExpert', { rem });
+        reviveBtn.classList.toggle('hidden', rem <= 0);
+    } else if (state.mode === 5) {
+        const rem = Math.max(0, 2 - state.revivesUsedThisGrid);
+        const livesToRestore = Math.max(1, MAX_LIVES - (state.revivesUsedThisGrid + 1));
+        adInfoBox.classList.remove('hidden');
+        adInfoBox.innerHTML = t('adRuleGod', { rem });
+        reviveBtn.textContent = t('adBtnGod', { lives: livesToRestore, rem });
+        reviveBtn.classList.toggle('hidden', rem <= 0);
     } else {
-        if (state.mode === 3) {
-            adInfoBox.classList.remove('hidden');
-            adInfoBox.innerHTML = `📺 Regarder une publicité restaure vos <b>4 vies (❤️❤️❤️❤️)</b>.`;
-            reviveBtn.textContent = `📺 Pub : Restaurer 4 Vies`;
-            reviveBtn.classList.remove('hidden');
-        } else if (state.mode === 4) {
-            const rem = Math.max(0, 2 - state.revivesUsedThisGrid);
-            adInfoBox.classList.remove('hidden');
-            adInfoBox.innerHTML = `⚠️ <b>Règle Mode Expert :</b> Limité à 2 recharges par grille (12 erreurs max).<br>Recharges restantes : <b>${rem} / 2</b>`;
-            if (rem > 0) {
-                reviveBtn.textContent = `📺 Pub : Restaurer 4 Vies (${rem}/2 restant)`;
-                reviveBtn.classList.remove('hidden');
-            } else {
-                reviveBtn.classList.add('hidden');
-            }
-        } else if (state.mode === 5) {
-            const rem = Math.max(0, 2 - state.revivesUsedThisGrid);
-            const livesToRestore = Math.max(1, MAX_LIVES - (state.revivesUsedThisGrid + 1));
-            adInfoBox.classList.remove('hidden');
-            adInfoBox.innerHTML = `⚡ <b>Règle Mode Dieu :</b> Limité à 2 recharges par grille et <b>-1 vie régénérée à chaque pub</b> (9 erreurs max).<br>Recharges restantes : <b>${rem} / 2</b>`;
-            if (rem > 0) {
-                reviveBtn.textContent = `📺 Pub : Restaurer ${livesToRestore} Vies (${rem}/2 restant)`;
-                reviveBtn.classList.remove('hidden');
-            } else {
-                reviveBtn.classList.add('hidden');
-            }
-        } else {
-            adInfoBox.classList.add('hidden');
-            reviveBtn.classList.add('hidden');
-        }
+        adInfoBox.classList.add('hidden');
+        reviveBtn.classList.add('hidden');
     }
 
     document.getElementById('modal-end').classList.remove('hidden');
@@ -1308,10 +1276,10 @@ function showEndModal(isWin, msg, isTutorialStepTransition = false) {
 document.getElementById('tool-num').addEventListener('click', () => setTool('num'));
 document.getElementById('tool-note').addEventListener('click', () => setTool('note'));
 
-function setTool(t) {
-    state.tool = t;
-    document.getElementById('tool-num').classList.toggle('active', t === 'num');
-    document.getElementById('tool-note').classList.toggle('active', t === 'note');
+function setTool(toolName) {
+    state.tool = toolName;
+    document.getElementById('tool-num').classList.toggle('active', toolName === 'num');
+    document.getElementById('tool-note').classList.toggle('active', toolName === 'note');
 }
 
 document.getElementById('btn-next-level').addEventListener('click', () => {
@@ -1323,21 +1291,19 @@ document.getElementById('btn-next-level').addEventListener('click', () => {
 
 document.getElementById('btn-extra-life').addEventListener('click', () => {
     let livesToGain = MAX_LIVES;
-    let ruleNote = `Vos <b>4 vies</b> seront intégralement restaurées.`;
+    let ruleNote = t('adRuleHard');
 
     if (state.mode === 4) {
         if (state.revivesUsedThisGrid >= 2) return;
-        const remAfter = 2 - (state.revivesUsedThisGrid + 1);
-        ruleNote = `Mode Expert : restaure <b>4 vies</b>.<br>Il vous restera <b>${remAfter}/2</b> recharge(s) sur cette grille.`;
+        ruleNote = t('adRuleExpert', { rem: 2 - (state.revivesUsedThisGrid + 1) });
     } else if (state.mode === 5) {
         if (state.revivesUsedThisGrid >= 2) return;
         livesToGain = Math.max(1, MAX_LIVES - (state.revivesUsedThisGrid + 1));
-        const remAfter = 2 - (state.revivesUsedThisGrid + 1);
-        ruleNote = `Mode Dieu : restaure <b>${livesToGain} vies</b> (1 vie de moins à chaque pub).<br>Il vous restera <b>${remAfter}/2</b> recharge(s) sur cette grille.`;
+        ruleNote = t('adRuleGod', { rem: 2 - (state.revivesUsedThisGrid + 1) });
     }
 
     requestRewardedAd({
-        title: "❤️ Recharger vos vies",
+        title: "❤️",
         description: ruleNote,
         onReward: () => {
             state.revivesUsedThisGrid++;
@@ -1345,28 +1311,24 @@ document.getElementById('btn-extra-life').addEventListener('click', () => {
             document.getElementById('modal-end').classList.add('hidden');
             saveCurrentGridSnapshot();
             updateUIStatus();
-            showToast(`❤️ +${livesToGain} vies restaurées !`, 'success');
+            showToast(`❤️ +${livesToGain} !`, 'success');
         }
     });
 });
 
 document.getElementById('btn-new-grid').addEventListener('click', () => {
     if (!state.isDaily && state.mode <= 1) {
-        showConfirmModal(
-            "🔄 Nouvelle grille",
-            "Recommencer ou générer une nouvelle grille d'apprentissage ?",
-            () => {
-                recordGameAbandoned(state.size);
-                delete state.savedGridsByKey[getGridKey()];
-                generatePuzzle(true);
-            }
-        );
+        showConfirmModal(t('newGridConfirmTitle'), t('newGridConfirmDesc'), () => {
+            recordGameAbandoned(state.size);
+            delete state.savedGridsByKey[getGridKey()];
+            generatePuzzle(true);
+        });
         return;
     }
 
     requestRewardedAd({
-        title: "🔄 Générer une nouvelle grille",
-        description: "Regardez une courte publicité pour abandonner la grille actuelle et en générer une nouvelle.<br><small>(Cette grille sera comptabilisée comme abandonnée dans vos statistiques).</small>",
+        title: t('newGridAdTitle'),
+        description: t('newGridAdDesc'),
         onReward: () => {
             recordGameAbandoned(state.size);
             delete state.savedGridsByKey[getGridKey()];
@@ -1375,14 +1337,12 @@ document.getElementById('btn-new-grid').addEventListener('click', () => {
     });
 });
 
-// --- CLIC SUR PUZZLE DU JOUR : DEMANDER SI LE JOUEUR CONNAÎT LES RÈGLES ---
 function promptDailyPuzzleCheck() {
     document.getElementById('modal-daily-check').classList.remove('hidden');
 }
 
 document.getElementById('btn-daily').addEventListener('click', () => {
     if (state.isDaily) {
-        // Si déjà sur le Défi du jour, un second clic ramène au mode normal en cours
         saveCurrentGridSnapshot();
         state.isDaily = false;
         saveProgress();
@@ -1409,7 +1369,7 @@ document.getElementById('btn-daily-cancel').addEventListener('click', () => {
     document.getElementById('modal-daily-check').classList.add('hidden');
 });
 
-// --- NAVIGATION CLAVIER (INCLUANT LES FLÈCHES DANS LE CARROUSEL DE RÈGLES) ---
+// --- CLAVIER ---
 window.addEventListener('keydown', (e) => {
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
 
@@ -1432,8 +1392,7 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 
-    const anyModalOpen = Array.from(document.querySelectorAll('.modal')).some(m => !m.classList.contains('hidden'));
-    if (anyModalOpen) return;
+    if (Array.from(document.querySelectorAll('.modal')).some(m => !m.classList.contains('hidden'))) return;
 
     const N = state.size;
     if (e.key === 'ArrowUp') { e.preventDefault(); state.selected.r = (state.selected.r - 1 + N) % N; renderAll(); }
@@ -1445,17 +1404,15 @@ window.addEventListener('keydown', (e) => {
     else if (e.key.toLowerCase() === 'n') { e.preventDefault(); setTool(state.tool === 'num' ? 'note' : 'num'); }
     else if (e.key === '?') { e.preventDefault(); openRulesModal(0, state.mode !== 0); }
     else {
-        const up = e.key.toUpperCase();
-        const idx = SYMBOLS.indexOf(up);
-        if (idx !== -1 && idx + 1 <= state.size) {
-            e.preventDefault();
-            handleNumberInput(idx + 1);
-        }
+        const idx = SYMBOLS.indexOf(e.key.toUpperCase());
+        if (idx !== -1 && idx + 1 <= state.size) { e.preventDefault(); handleNumberInput(idx + 1); }
     }
 });
 
-// --- MENU HUB CENTRALISÉ ---
+// --- MENU HUB ---
 document.getElementById('btn-menu').addEventListener('click', () => {
+    const dot = document.getElementById('menu-unlock-dot');
+    if (dot) dot.classList.add('hidden');
     renderModesTab();
     renderStatsTab();
     renderThemesTab();
@@ -1485,10 +1442,10 @@ function renderModesTab() {
         div.className = 'mode-item' + (unlocked ? '' : ' locked');
         div.innerHTML = `
             <div>
-                <strong>${m.id === 6 && !unlocked ? 'Mode 6 : ????' : m.name}</strong>
-                <div style="font-size:0.74rem">${unlocked ? m.desc : `Débloqué à ${m.reqWins} grilles résolues (${totalWins}/${m.reqWins})`}</div>
+                <strong>${m.id === 6 && !unlocked ? 'Mode 6 : ????' : t(m.nameKey)}</strong>
+                <div style="font-size:0.74rem">${unlocked ? t(m.descKey) : t('modeLocked', { req: m.reqWins, cur: totalWins })}</div>
             </div>
-            <button ${unlocked ? '' : 'disabled'} class="primary-btn" style="padding:6px 10px">${isCurrent ? 'Actif' : 'Choisir'}</button>
+            <button ${unlocked ? '' : 'disabled'} class="primary-btn" style="padding:6px 10px">${isCurrent ? t('active') : t('choose')}</button>
         `;
         if (unlocked) {
             div.querySelector('button').addEventListener('click', () => {
@@ -1507,10 +1464,7 @@ function renderModesTab() {
                 saveCurrentGridSnapshot();
                 state.isDaily = false;
                 state.mode = m.id;
-                if (m.id === 0) {
-                    state.tutorialStep = 0;
-                    state.hasSeenIntroRules = false;
-                }
+                if (m.id === 0) { state.tutorialStep = 0; state.hasSeenIntroRules = false; }
                 saveProgress();
                 document.getElementById('modal-hub').classList.add('hidden');
                 generatePuzzle(false);
@@ -1524,9 +1478,7 @@ function renderModesTab() {
 
 function renderStatsTab() {
     const filterVal = document.getElementById('stats-size-filter').value;
-    const st = (filterVal === 'global')
-        ? state.stats.global
-        : getStatBucketForSize(parseInt(filterVal, 10));
+    const st = (filterVal === 'global') ? state.stats.global : getStatBucketForSize(parseInt(filterVal, 10));
 
     const timedWins = st.timedGamesWon || 0;
     const abandoned = st.gamesAbandoned || 0;
@@ -1543,48 +1495,48 @@ function renderStatsTab() {
     document.getElementById('stats-grid').innerHTML = `
         <div class="stat-card">
             <div class="stat-val">${st.gamesWon}</div>
-            <div class="stat-lbl">Grilles Résolues (${winRate}%)</div>
+            <div class="stat-lbl">${t('statsSolved', { rate: winRate })}</div>
         </div>
         <div class="stat-card">
             <div class="stat-val">${formatTime(st.bestTime)}</div>
-            <div class="stat-lbl">Temps le plus rapide</div>
+            <div class="stat-lbl">${t('statsBestTime')}</div>
         </div>
         <div class="stat-card">
             <div class="stat-val">${formatTime(avgTime)}</div>
-            <div class="stat-lbl">Temps Moyen</div>
+            <div class="stat-lbl">${t('statsAvgTime')}</div>
         </div>
         <div class="stat-card">
             <div class="stat-val">${formatTime(st.worstTime)}</div>
-            <div class="stat-lbl">Temps le plus lent</div>
+            <div class="stat-lbl">${t('statsWorstTime')}</div>
         </div>
     `;
 
     document.getElementById('stats-details').innerHTML = `
-        <div class="stats-row"><span>Grilles démarrées :</span><strong>${st.gamesStarted}</strong></div>
-        <div class="stats-row"><span>Grilles abandonnées (🔄) :</span><strong>${abandoned}</strong></div>
-        <div class="stats-row"><span>Grilles perdues (Plus de vies) :</span><strong>${lost}</strong></div>
-        <div class="stats-row"><span>Vies utilisées / perdues :</span><strong>❤️ ${livesUsed}</strong></div>
-        <div class="stats-row"><span>Résolues SANS bonus :</span><strong>${st.noBonusWinsTotal} (${noBonusRate}%)</strong></div>
-        <div class="stats-row"><span>Résolues AVEC bonus :</span><strong>${withBonusWins} (${withBonusRate}%)</strong></div>
-        <div class="stats-row"><span>Total de bonus consommés :</span><strong>${st.totalBonusesUsed}</strong></div>
-        <div class="stats-row"><span>Victoires sans aucune erreur :</span><strong>${st.flawlessWins} (${flawlessRate}%)</strong></div>
+        <div class="stats-row"><span>${t('statsStarted')}</span><strong>${st.gamesStarted}</strong></div>
+        <div class="stats-row"><span>${t('statsAbandoned')}</span><strong>${abandoned}</strong></div>
+        <div class="stats-row"><span>${t('statsLost')}</span><strong>${lost}</strong></div>
+        <div class="stats-row"><span>${t('statsLivesUsed')}</span><strong>❤️ ${livesUsed}</strong></div>
+        <div class="stats-row"><span>${t('statsNoBonus')}</span><strong>${st.noBonusWinsTotal} (${noBonusRate}%)</strong></div>
+        <div class="stats-row"><span>${t('statsWithBonus')}</span><strong>${withBonusWins} (${withBonusRate}%)</strong></div>
+        <div class="stats-row"><span>${t('statsTotalBonuses')}</span><strong>${st.totalBonusesUsed}</strong></div>
+        <div class="stats-row"><span>${t('statsFlawless')}</span><strong>${st.flawlessWins} (${flawlessRate}%)</strong></div>
     `;
 }
 
 function renderThemesTab() {
     const tList = document.getElementById('theme-selector');
     tList.innerHTML = '';
-    THEMES.forEach(t => {
-        const unlocked = isThemeUnlocked(t.id);
+    THEMES.forEach(th => {
+        const unlocked = isThemeUnlocked(th.id);
         const div = document.createElement('div');
         div.className = 'theme-item' + (unlocked ? '' : ' locked');
         div.innerHTML = `
-            <div><strong>${t.name}</strong><div style="font-size:0.74rem">${t.cond}</div></div>
-            <button ${unlocked ? '' : 'disabled'} class="primary-btn" style="padding:6px 10px">${state.theme === t.id ? 'Équipé' : 'Choisir'}</button>
+            <div><strong>${t(th.nameKey)}</strong><div style="font-size:0.74rem">${t(th.condKey)}</div></div>
+            <button ${unlocked ? '' : 'disabled'} class="primary-btn" style="padding:6px 10px">${state.theme === th.id ? t('equipped') : t('choose')}</button>
         `;
         if (unlocked) {
             div.querySelector('button').addEventListener('click', () => {
-                applyTheme(t.id);
+                applyTheme(th.id);
                 renderThemesTab();
             });
         }
@@ -1593,10 +1545,10 @@ function renderThemesTab() {
 
     const aList = document.getElementById('achievements-list');
     const achs = [
-        { name: "Esprit Pur", desc: `Gagner 5 grilles sans bonus (${state.noBonusWins}/5)`, done: state.allUnlockedTest || state.noBonusWins >= 5 },
-        { name: "Infaillible", desc: `Série de 10 grilles sans erreur (${state.flawlessStreak}/10)`, done: state.allUnlockedTest || state.flawlessStreak >= 10 },
-        { name: "Habitué", desc: `Connexion 3 jours d'affilée (${state.streak}/3)`, done: state.allUnlockedTest || state.streak >= 3 },
-        { name: state.devUnlocked ? "🤩 Maître PGM Hexadécimal" : "????", desc: state.devUnlocked ? "Mode 6 : 🤩 PGM (10x10 à 16x16) débloqué" : "Terminer 5 grilles 9x9 sans erreur ni bonus (ou code donateur)", done: state.devUnlocked }
+        { name: t('achPureName'), desc: t('achPureDesc', { cur: state.noBonusWins }), done: state.allUnlockedTest || state.noBonusWins >= 5 },
+        { name: t('achFlawlessName'), desc: t('achFlawlessDesc', { cur: state.flawlessStreak }), done: state.allUnlockedTest || state.flawlessStreak >= 10 },
+        { name: t('achRegularName'), desc: t('achRegularDesc', { cur: state.streak }), done: state.allUnlockedTest || state.streak >= 3 },
+        { name: state.devUnlocked ? t('achPgmName') : "????", desc: state.devUnlocked ? t('achPgmUnlockedDesc') : t('achPgmLockedDesc'), done: state.devUnlocked }
     ];
     aList.innerHTML = achs.map(a => `
         <div class="ach-item ${a.done ? '' : 'locked'}">
@@ -1617,19 +1569,20 @@ document.getElementById('btn-secret-code').addEventListener('click', () => {
         state.debugVisible = !state.debugVisible;
         saveProgress();
         renderModesTab();
-        showToast(state.debugVisible ? "🛠️ Outils de test affichés dans ce menu." : "🛠️ Outils de test masqués.", 'info');
         document.getElementById('secret-code-input').value = '';
         return;
     }
 
+    const beforeUnlocks = getUnlockStateMap();
     const h = hashSecret(val);
     if (h === '0xfbf74c7d' || h === '0xbfde7f15') {
         state.devUnlocked = true;
         saveProgress();
-        showToast("🤩 Mode PGM (Hexadécimal 10x10 à 16x16) débloqué !", 'success');
+        checkAndNotifyNewUnlocks(beforeUnlocks);
         renderModesTab();
+        renderThemesTab();
     } else {
-        showToast("❌ Code invalide.", 'error');
+        showToast(t('codeInvalid'), 'error');
     }
 });
 
@@ -1640,49 +1593,41 @@ document.getElementById('footer-credits').addEventListener('click', () => {
         footerTapCount = 0;
         state.debugVisible = !state.debugVisible;
         saveProgress();
-        showToast(state.debugVisible ? "🛠️ Mode Test Développeur activé dans le menu ☰ !" : "🛠️ Mode Test Développeur masqué.", 'info');
+        showToast(state.debugVisible ? "🛠️ Dev Mode ON" : "🛠️ Dev Mode OFF", 'info');
     }
 });
 
 document.getElementById('btn-player-reset').addEventListener('click', () => {
-    showConfirmModal(
-        "🗑️ Réinitialiser la progression",
-        "Voulez-vous vraiment effacer votre progression et revoir les règles depuis le tutoriel ?",
-        () => {
-            localStorage.removeItem(SAVE_KEY);
-            state = getDefaultState();
-            applyTheme('theme-paper');
-            document.getElementById('modal-hub').classList.add('hidden');
-            generatePuzzle(true);
-            showToast("Progression réinitialisée.", 'info');
-        }
-    );
+    showConfirmModal(t('resetConfirmTitle'), t('resetConfirmDesc'), () => {
+        localStorage.removeItem(SAVE_KEY);
+        state = getDefaultState();
+        applyLanguage(currentLang);
+        document.getElementById('modal-hub').classList.add('hidden');
+        generatePuzzle(true);
+        showToast(t('resetDoneToast'), 'info');
+    });
 });
 
 document.getElementById('btn-debug-unlock').addEventListener('click', () => {
+    const beforeUnlocks = getUnlockStateMap();
     state.allUnlockedTest = true;
     state.devUnlocked = true;
     state.bonuses = { b1: 99, b2: 0, b3: 99 };
     saveProgress();
+    checkAndNotifyNewUnlocks(beforeUnlocks);
     renderModesTab();
     renderThemesTab();
     updateUIStatus();
-    showToast("🔓 Mode Test activé : Tous les modes (dont 🤩 PGM), tailles et thèmes sont débloqués !", 'success');
 });
 
 document.getElementById('btn-debug-reset').addEventListener('click', () => {
-    showConfirmModal(
-        "🗑️ Reset Total (Test)",
-        "Réinitialiser complètement le jeu et les statistiques comme au tout 1er lancement ?",
-        () => {
-            localStorage.removeItem(SAVE_KEY);
-            state = getDefaultState();
-            applyTheme('theme-paper');
-            document.getElementById('modal-hub').classList.add('hidden');
-            generatePuzzle(true);
-            showToast("Jeu remis à zéro (1er démarrage).", 'info');
-        }
-    );
+    showConfirmModal("🗑️ Reset Total", t('resetConfirmDesc'), () => {
+        localStorage.removeItem(SAVE_KEY);
+        state = getDefaultState();
+        applyLanguage(currentLang);
+        document.getElementById('modal-hub').classList.add('hidden');
+        generatePuzzle(true);
+    });
 });
 
 function isThemeUnlocked(id) {
@@ -1696,13 +1641,13 @@ function applyTheme(themeId) {
     if (themeId === 'theme-neon') themeId = 'theme-slate';
     state.theme = themeId;
     document.body.className = `game-screen ${themeId}`;
-    const tObj = THEMES.find(t => t.id === themeId) || THEMES[0];
+    const tObj = THEMES.find(th => th.id === themeId) || THEMES[0];
     document.getElementById('icon-b1').textContent = tObj.icons[0];
     document.getElementById('icon-b2').textContent = tObj.icons[1];
     document.getElementById('icon-b3').textContent = tObj.icons[2];
-    document.getElementById('name-b1').textContent = tObj.names[0];
-    document.getElementById('name-b2').textContent = tObj.names[1];
-    document.getElementById('name-b3').textContent = tObj.names[2];
+    document.getElementById('name-b1').textContent = t(tObj.bKeys[0]);
+    document.getElementById('name-b2').textContent = t(tObj.bKeys[1]);
+    document.getElementById('name-b3').textContent = t(tObj.bKeys[2]);
     saveProgress();
 }
 
@@ -1716,11 +1661,10 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// Lancement (avec vérification des règles si l'utilisateur arrive via ?daily=1)
+// Lancement
 loadProgress();
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('debug') === '1') state.debugVisible = true;
-
 if (urlParams.get('daily') === '1') {
     generatePuzzle(false);
     promptDailyPuzzleCheck();

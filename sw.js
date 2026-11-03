@@ -1,9 +1,10 @@
-const CACHE_NAME = 'kurogram-cache-v1.2.0';
+const CACHE_NAME = 'kurogram-cache-v1.3.0';
 const ASSETS = [
   './',
   './index.html',
   './portail.html',
   './style.css',
+  './i18n.js',
   './game.js',
   './manifest.json',
   './icon.svg',
@@ -27,7 +28,6 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// Stratégie "Network First" : cherche toujours la dernière mise à jour sur GitHub Pages, et utilise le cache si hors-ligne
 self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request)
